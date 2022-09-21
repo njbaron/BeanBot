@@ -1,0 +1,12 @@
+${light_green}      ___      ${yellow}      ___      ${light_green}      ___      ${yellow}      ___      ${light_green}      ___      ${yellow}      ___       ${light_green}             ${reset}
+${light_green}     /  /\     ${yellow}     /  /\     ${light_green}     /  /\     ${yellow}     /  /\     ${light_green}     /  /\     ${yellow}     /  /\      ${light_green}     ___     ${reset}
+${light_green}    /  /::\    ${yellow}    /  /::\    ${light_green}    /  /::\    ${yellow}    /  /::|    ${light_green}    /  /::\    ${yellow}    /  /::\     ${light_green}    /__/\    ${reset}
+${light_green}   /  /:/\:\   ${yellow}   /  /:/\:\   ${light_green}   /  /:/\:\   ${yellow}   /  /:|:|    ${light_green}   /  /:/\:\   ${yellow}   /  /:/\:\    ${light_green}    \  \:\   ${reset}
+${light_green}  /  /::\ \:\  ${yellow}  /  /::\ \:\  ${light_green}  /  /::\ \:\  ${yellow}  /  /:/|:|__  ${light_green}  /  /::\ \:\  ${yellow}  /  /:/  \:\   ${light_green}     \__\:\  ${reset}
+${light_green} /__/:/\:\_\:| ${yellow} /__/:/\:\ \:\ ${light_green} /__/:/\:\_\:\ ${yellow} /__/:/ |:| /\ ${light_green} /__/:/\:\_\:| ${yellow} /__/:/ \__\:\  ${light_green}     /  /::\ ${reset}
+${light_green} \  \:\ \:\/:/ ${yellow} \  \:\ \:\_\/ ${light_green} \__\/  \:\/:/ ${yellow} \__\/  |:|/:/ ${light_green} \  \:\ \:\/:/ ${yellow} \  \:\ /  /:/  ${light_green}    /  /:/\:\${reset}
+${light_green}  \  \:\_\::/  ${yellow}  \  \:\ \:\   ${light_green}      \__\::/  ${yellow}     |  |:/:/  ${light_green}  \  \:\_\::/  ${yellow}  \  \:\  /:/   ${light_green}   /  /:/__\/${reset}
+${light_green}   \  \:\/:/   ${yellow}   \  \:\_\/   ${light_green}      /  /:/   ${yellow}     |__|::/   ${light_green}   \  \:\/:/   ${yellow}   \  \:\/:/    ${light_green}  /__/:/     ${reset}
+${light_green}    \__\::/    ${yellow}    \  \:\     ${light_green}     /__/:/    ${yellow}     /__/:/    ${light_green}    \__\::/    ${yellow}    \  \::/     ${light_green}  \__\/      ${reset}
+${light_green}        ~~     ${yellow}     \__\/     ${light_green}     \__\/     ${yellow}     \__\/     ${light_green}        ~~     ${yellow}     \__\/      ${light_green}             ${reset}
+

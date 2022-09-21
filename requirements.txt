@@ -1,0 +1,5 @@
+hikari==2.0.0.dev110
+hikari-lightbulb==2.2.4
+python-dotenv==0.21.0
+psutil==5.9.2
+uvloop>=0.16.0; sys_platform != "win32"
