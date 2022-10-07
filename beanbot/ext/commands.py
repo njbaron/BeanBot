@@ -34,21 +34,20 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
 
     if isinstance(exception, lightbulb.NotOwner):
         await event.context.respond(
-            "This feature is restricted to the owner of this bot."
+            ":warning: This feature is restricted to the owner of this bot."
         )
     elif isinstance(exception, lightbulb.CommandIsOnCooldown):
         await event.context.respond(
-            f"This command is on cooldown. Retry in `{exception.retry_after:.2f}` seconds."
+            f":warning: This command is on cooldown. Retry in `{exception.retry_after:.2f}` seconds."
         )
     elif isinstance(exception, lightbulb.CommandNotFound):
         all_commands = list(event.bot.prefix_commands.keys())
-        all_commands.extend(list(event.bot.slash_commands.keys()))
         bad_command = exception.invoked_with
         possible_command = difflib.get_close_matches(
             bad_command, all_commands, n=1, cutoff=0.1
         )[0]
         await event.context.respond(
-            f"Unknown command `{bad_command}`. Did you mean `{possible_command}`?",
+            f":warning: Unknown command `{bad_command}`. Did you mean `{possible_command}`?",
             delete_after=5,
         )
     else:

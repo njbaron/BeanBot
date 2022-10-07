@@ -12,31 +12,16 @@ logger = logging.getLogger(__name__)
 
 bot = lightbulb.BotApp(
     token=config.BOT_TOKEN,
-    prefix=lightbulb.when_mentioned_or(","),
-    # intents=hikari.Intents.MESSAGE_CONTENT,
-    default_enabled_guilds=(config.GUILD_ID,),
-    # delete_unbound_commands=True,
-    # case_insensitive_prefix_commands=True,
-    # owner_ids=(config.OWNER_ID,),
+    prefix=lightbulb.when_mentioned_or(config.BOT_PREFIX),
+    default_enabled_guilds=config.GUILD_IDS,
     banner=str(__title__).lower(),
 )
 
 
 @bot.listen(hikari.StartingEvent)
 async def starting_listener(event: hikari.StartingEvent) -> None:
-    config.print()
     bot.d.aio_session = aiohttp.ClientSession()
     bot.load_extensions_from("./beanbot/ext/", must_exist=True)
-
-
-@bot.listen(hikari.StoppingEvent)
-async def stopping_listener(event: hikari.StoppingEvent) -> None:
-    await bot.d.aio_session.close()
-
-    await bot.rest.create_message(
-        config.LOG_CHANNEL_ID, f"{__title__} `STOPPED` at <t:{int(time.time())}>"
-    )
-    logging.info(f"{__title__} is offline!")
 
 
 @bot.listen(hikari.StartedEvent)
@@ -53,6 +38,16 @@ async def ready_listener(event: hikari.StartedEvent) -> None:
     logging.info(f"{__title__} is online!")
 
 
+@bot.listen(hikari.StoppingEvent)
+async def stopping_listener(event: hikari.StoppingEvent) -> None:
+    await bot.d.aio_session.close()
+
+    await bot.rest.create_message(
+        config.LOG_CHANNEL_ID, f"{__title__} `STOPPED` at <t:{int(time.time())}>"
+    )
+    logging.info(f"{__title__} is offline!")
+
+
 @bot.command
 @lightbulb.add_checks(lightbulb.owner_only)
 @lightbulb.option("ext", description="The Plugin to load", type=str, required=False)
@@ -63,6 +58,7 @@ async def load_ext(ctx: context.Context) -> None:
     if ext is None:
         await ctx.respond(f"No Plugin provided to load!", reply=True)
         return
+
     try:
         bot.load_extensions(f"beanbot.ext.{ext}")
         await ctx.respond(f"Successfully loaded Plugin {ext}", reply=True)
@@ -82,14 +78,14 @@ async def unload_ext(ctx: context.Context) -> None:
     if ext is None:
         await ctx.respond(f"No Plugin provided to unload!", reply=True)
         return
-    else:
-        try:
-            bot.unload_extensions(f"beanbot.ext.{ext}")
-            await ctx.respond(f"Successfully unloaded Plugin {ext}", reply=True)
-        except Exception as e:
-            await ctx.respond(
-                f":warning: Couldn't unload Plugin {ext}. The following exception was raised: \n```{e.__cause__ or e}```"
-            )
+
+    try:
+        bot.unload_extensions(f"beanbot.ext.{ext}")
+        await ctx.respond(f"Successfully unloaded Plugin {ext}", reply=True)
+    except Exception as e:
+        await ctx.respond(
+            f":warning: Couldn't unload Plugin {ext}. The following exception was raised: \n```{e.__cause__ or e}```"
+        )
 
 
 @bot.command
@@ -102,6 +98,7 @@ async def reload_ext(ctx: context.Context) -> None:
     if ext is None:
         await ctx.respond(f"No Plugin provided to reload!", reply=True)
         return
+
     try:
         bot.reload_extensions(f"beanbot.ext.{ext}")
         await ctx.respond(f"Successfully reloaded Plugin {ext}", reply=True)
