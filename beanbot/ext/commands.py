@@ -8,7 +8,10 @@ from beanbot import config
 
 logger = logging.getLogger(__name__)
 
-commands_plugin = lightbulb.Plugin("Commands")
+commands_plugin = lightbulb.Plugin(
+    name="Commands",
+    description="A extension to log commands and handle command errors.",
+)
 
 
 @commands_plugin.listener(events.CommandInvocationEvent)

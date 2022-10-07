@@ -1,7 +1,7 @@
 import hikari
 import lightbulb
 
-mod_plugin = lightbulb.Plugin("Mod")
+mod_plugin = lightbulb.Plugin(name="Mod", description="Moderator tools")
 
 
 @mod_plugin.command

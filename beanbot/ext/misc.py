@@ -4,10 +4,13 @@ from random import choice
 import hikari
 import lightbulb
 
-misc_plugin = lightbulb.Plugin("Text")
+text_plugin = lightbulb.Plugin(
+    name="Text",
+    description="Commands the modify things that the users type to the bot.",
+)
 
 
-@misc_plugin.command
+@text_plugin.command
 @lightbulb.option("message", "The message to uwu.", type=str, required=True)
 @lightbulb.command("uwu", "Makes a message uwu.")
 @lightbulb.implements(lightbulb.PrefixCommand, lightbulb.SlashCommand)
@@ -50,7 +53,7 @@ async def uwu_message(ctx: lightbulb.Context) -> None:
     await resp.edit(f"{choice(greetings)} {message} {choice(faces)}")
 
 
-@misc_plugin.command
+@text_plugin.command
 @lightbulb.option("question", "The question to ask the 8ball.", type=str, required=True)
 @lightbulb.command("8ball", "Ask me a question.")
 @lightbulb.implements(lightbulb.PrefixCommand, lightbulb.SlashCommand)
@@ -84,7 +87,7 @@ async def magic_8ball(ctx: lightbulb.Context) -> None:
 dice_types = {"d4": 4, "d6": 6, "d8": 8, "d10": 10, "d12": 12, "d20": 20, "d100": 100}
 
 
-@misc_plugin.command
+@text_plugin.command
 @lightbulb.option(
     "dice", "The type of dice to roll.", type=str, choices=list(dice_types.keys())
 )
@@ -116,7 +119,7 @@ async def roll_dice(ctx: lightbulb.Context) -> None:
     await ctx.respond(f"Rolling `{number}{dice}`: ```{response_str}```")
 
 
-@misc_plugin.command
+@text_plugin.command
 @lightbulb.command("flip", "Flips a coin.", aliases=["toss"])
 @lightbulb.implements(lightbulb.PrefixCommand, lightbulb.SlashCommand)
 async def toss_coin(ctx: lightbulb.Context) -> None:
@@ -125,8 +128,8 @@ async def toss_coin(ctx: lightbulb.Context) -> None:
 
 
 def load(bot: lightbulb.BotApp) -> None:
-    bot.add_plugin(misc_plugin)
+    bot.add_plugin(text_plugin)
 
 
 def unload(bot: lightbulb.BotApp) -> None:
-    bot.remove_plugin(misc_plugin)
+    bot.remove_plugin(text_plugin)

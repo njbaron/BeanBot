@@ -3,7 +3,10 @@ import asyncio
 import hikari
 import lightbulb
 
-fun_plugin = lightbulb.Plugin("Fun")
+fun_plugin = lightbulb.Plugin(
+    name="Fun",
+    description="Commands that help promote a good attitude and bring joy to people lives.",
+)
 
 
 @fun_plugin.command

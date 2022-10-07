@@ -14,7 +14,10 @@ from beanbot import __title__, __version__
 
 logger = logging.getLogger(__name__)
 
-info_plugin = lightbulb.Plugin("Info")
+info_plugin = lightbulb.Plugin(
+    name="Info",
+    description="Commands the provide info about the bot, it's users and other things.",
+)
 
 
 @info_plugin.command
