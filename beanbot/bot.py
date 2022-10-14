@@ -4,6 +4,7 @@ import time
 import aiohttp
 import hikari
 import lightbulb
+import miru
 from lightbulb import commands, context
 
 from beanbot import __title__, __version__, config
@@ -16,6 +17,7 @@ bot = lightbulb.BotApp(
     default_enabled_guilds=config.GUILD_IDS,
     banner=str(__title__).lower(),
 )
+miru.load(bot)
 
 
 @bot.listen(hikari.StartingEvent)
@@ -29,12 +31,13 @@ async def ready_listener(event: hikari.StartedEvent) -> None:
     await bot.update_presence(
         status=hikari.Status.ONLINE,
         activity=hikari.Activity(
-            name=f".help | v{__version__}", type=hikari.ActivityType.PLAYING
+            name=f"{config.BOT_PREFIX}help | v{__version__}",
+            type=hikari.ActivityType.PLAYING,
         ),
     )
-    await bot.rest.create_message(
-        config.LOG_CHANNEL_ID, f"{__title__} `STARTED` at <t:{int(time.time())}>"
-    )
+    # await bot.rest.create_message(
+    #     config.LOG_CHANNEL_ID, f"{__title__} `STARTED` at <t:{int(time.time())}>"
+    # )
     logging.info(f"{__title__} is online!")
 
 
@@ -42,69 +45,57 @@ async def ready_listener(event: hikari.StartedEvent) -> None:
 async def stopping_listener(event: hikari.StoppingEvent) -> None:
     await bot.d.aio_session.close()
 
-    await bot.rest.create_message(
-        config.LOG_CHANNEL_ID, f"{__title__} `STOPPED` at <t:{int(time.time())}>"
-    )
+    # await bot.rest.create_message(
+    #     config.LOG_CHANNEL_ID, f"{__title__} `STOPPED` at <t:{int(time.time())}>"
+    # )
     logging.info(f"{__title__} is offline!")
 
 
 @bot.command
 @lightbulb.add_checks(lightbulb.owner_only)
-@lightbulb.option("ext", description="The Plugin to load", type=str, required=False)
+@lightbulb.option("ext", description="The Plugin to load", type=str)
 @lightbulb.command("load", "Loads an extension", hidden=True)
 @lightbulb.implements(commands.PrefixCommand)
 async def load_ext(ctx: context.Context) -> None:
-    ext = ctx.options.ext if ctx.options.ext is not None else None
-    if ext is None:
-        await ctx.respond(f"No Plugin provided to load!", reply=True)
-        return
-
+    extension = ctx.options.ext
     try:
-        bot.load_extensions(f"beanbot.ext.{ext}")
-        await ctx.respond(f"Successfully loaded Plugin {ext}", reply=True)
+        bot.load_extensions(f"beanbot.ext.{extension}")
+        await ctx.respond(f"Successfully loaded Plugin {extension}", reply=True)
     except Exception as e:
         await ctx.respond(
-            f":warning: Couldn't load Plugin {ext}. The following exception was raised: \n```{e.__cause__ or e}```"
+            f":warning: Couldn't load Plugin {extension}. The following exception was raised: \n```{e.__cause__ or e}```"
         )
 
 
 @bot.command
 @lightbulb.add_checks(lightbulb.owner_only)
-@lightbulb.option("ext", description="The Plugin to unload", type=str, required=False)
+@lightbulb.option("ext", description="The Plugin to unload", type=str)
 @lightbulb.command("unload", "Unloads an extension", hidden=True)
 @lightbulb.implements(commands.PrefixCommand)
 async def unload_ext(ctx: context.Context) -> None:
-    ext = ctx.options.ext if ctx.options.ext is not None else None
-    if ext is None:
-        await ctx.respond(f"No Plugin provided to unload!", reply=True)
-        return
-
+    extension = ctx.options.ext
     try:
-        bot.unload_extensions(f"beanbot.ext.{ext}")
-        await ctx.respond(f"Successfully unloaded Plugin {ext}", reply=True)
+        bot.unload_extensions(f"beanbot.ext.{extension}")
+        await ctx.respond(f"Successfully unloaded Plugin {extension}", reply=True)
     except Exception as e:
         await ctx.respond(
-            f":warning: Couldn't unload Plugin {ext}. The following exception was raised: \n```{e.__cause__ or e}```"
+            f":warning: Couldn't unload Plugin {extension}. The following exception was raised: \n```{e.__cause__ or e}```"
         )
 
 
 @bot.command
 @lightbulb.add_checks(lightbulb.owner_only)
-@lightbulb.option("ext", description="The Plugin to reload", type=str, required=False)
+@lightbulb.option("ext", description="The Plugin to reload", type=str)
 @lightbulb.command("reload", "Reloads an extension", hidden=True)
 @lightbulb.implements(commands.PrefixCommand)
 async def reload_ext(ctx: context.Context) -> None:
-    ext = ctx.options.ext if ctx.options.ext is not None else None
-    if ext is None:
-        await ctx.respond(f"No Plugin provided to reload!", reply=True)
-        return
-
+    extension = ctx.options.ext
     try:
-        bot.reload_extensions(f"beanbot.ext.{ext}")
-        await ctx.respond(f"Successfully reloaded Plugin {ext}", reply=True)
+        bot.reload_extensions(f"beanbot.ext.{extension}")
+        await ctx.respond(f"Successfully reloaded Plugin {extension}", reply=True)
     except Exception as e:
         await ctx.respond(
-            f":warning: Couldn't reload Plugin {ext}. The Plugin has been reverted back to the previous working state if already loaded. The following exception was raised: \n```{e.__cause__ or e}```"
+            f":warning: Couldn't reload Plugin {extension}. The Plugin has been reverted back to the previous working state if already loaded. The following exception was raised: \n```{e.__cause__ or e}```"
         )
 
 

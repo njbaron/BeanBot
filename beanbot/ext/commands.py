@@ -51,7 +51,18 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
         )[0]
         await event.context.respond(
             f":warning: Unknown command `{bad_command}`. Did you mean `{possible_command}`?",
-            delete_after=5,
+            delete_after=10,
+        )
+    elif isinstance(exception, lightbulb.NotEnoughArguments):
+        missing_option_str = "\n".join(
+            [
+                f"{option.name}: {option.description}"
+                for option in exception.missing_options
+            ]
+        )
+        await event.context.respond(
+            f":warning: Missing required argument(s): ```{missing_option_str}```",
+            delete_after=10,
         )
     else:
         logger.exception(exception)

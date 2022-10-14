@@ -5,7 +5,7 @@ FROM python:3.9
 
 RUN \
   apt-get update -q && \
-#   apt-get install -y && \
+  apt-get install -y && \
   apt-get autoremove 
 
 WORKDIR /bot
