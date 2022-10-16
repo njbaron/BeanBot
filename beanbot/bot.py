@@ -1,11 +1,10 @@
 import logging
-import time
 
 import aiohttp
 import hikari
 import lightbulb
-import miru
 from lightbulb import commands, context
+import miru
 
 from beanbot import __title__, __version__, config
 
