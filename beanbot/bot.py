@@ -3,8 +3,8 @@ import logging
 import aiohttp
 import hikari
 import lightbulb
-from lightbulb import commands, context
 import miru
+from lightbulb import commands, context
 
 from beanbot import __title__, __version__, config
 
