@@ -59,7 +59,7 @@ async def load_ext(ctx: context.Context) -> None:
     extension = ctx.options.ext
     try:
         bot.load_extensions(f"beanbot.ext.{extension}")
-        await ctx.respond(f"Successfully loaded Plugin {extension}", reply=True)
+        await ctx.respond(f"Successfully loaded Plugin: `{extension}`", reply=True)
     except Exception as e:
         await ctx.respond(
             f":warning: Couldn't load Plugin {extension}. The following exception was raised: \n```{e.__cause__ or e}```"
@@ -75,7 +75,7 @@ async def unload_ext(ctx: context.Context) -> None:
     extension = ctx.options.ext
     try:
         bot.unload_extensions(f"beanbot.ext.{extension}")
-        await ctx.respond(f"Successfully unloaded Plugin {extension}", reply=True)
+        await ctx.respond(f"Successfully unloaded Plugin: `{extension}`", reply=True)
     except Exception as e:
         await ctx.respond(
             f":warning: Couldn't unload Plugin {extension}. The following exception was raised: \n```{e.__cause__ or e}```"
@@ -91,7 +91,7 @@ async def reload_ext(ctx: context.Context) -> None:
     extension = ctx.options.ext
     try:
         bot.reload_extensions(f"beanbot.ext.{extension}")
-        await ctx.respond(f"Successfully reloaded Plugin {extension}", reply=True)
+        await ctx.respond(f"Successfully reloaded Plugin: `{extension}`", reply=True)
     except Exception as e:
         await ctx.respond(
             f":warning: Couldn't reload Plugin {extension}. The Plugin has been reverted back to the previous working state if already loaded. The following exception was raised: \n```{e.__cause__ or e}```"

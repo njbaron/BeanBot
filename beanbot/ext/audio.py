@@ -49,13 +49,14 @@ class AudioPlayer(lavalink.DefaultPlayer):
 
     async def add_tracks_from_results(
         self, ctx: lightbulb.Context, results: lavalink.LoadResult
-    ) -> None:
+    ) -> bool:
 
+        queue_len = len(self.queue)
         if not results or results.load_type in [
             lavalink.LoadType.LOAD_FAILED,
             lavalink.LoadType.NO_MATCHES,
         ]:
-            return await ctx.respond(
+            await ctx.respond(
                 f"No tracks found for `{ctx.options.query}`", reply=True
             )
 
@@ -88,6 +89,8 @@ class AudioPlayer(lavalink.DefaultPlayer):
             raise errors.FindItemExcpetion(
                 f"Unable to handle the result {results.load_type}"
             )
+        
+        return queue_len != len(self.queue)
 
 
 #########################################################
@@ -160,19 +163,19 @@ async def play(ctx: lightbulb.Context) -> None:
             query = query.split("&list=")[0]
 
         results: lavalink.LoadResult = await player.node.get_tracks(query)
-        await player.add_tracks_from_results(ctx, results)
+        if not await player.add_tracks_from_results(ctx, results):
+            return
 
     if not (ctx.options.query and player.paused):
         if not player.is_playing:
             await player.play()
+            await ctx.respond("Playing audio!", reply=True)
         elif player.paused:
             await player.set_pause(False)
+            await ctx.respond("Resuming audio!", reply=True)
 
 
 @audio_plugin.command
-@lightbulb.option(
-    "leave", "Forces leaving the voice channel.", type=bool, required=False
-)
 @lightbulb.command("stop", "Stops all audio tells the bot to leave the voice channel.")
 @lightbulb.implements(lightbulb.PrefixCommand, lightbulb.SlashCommand)
 async def stop(ctx: lightbulb.Context) -> None:
@@ -184,12 +187,15 @@ async def stop(ctx: lightbulb.Context) -> None:
 
     if player.is_playing:
         await player.stop()
+        await ctx.respond("Audio stopped!", reply=True)
 
     if not player.queue:
-        return await player.disconnect()
+        await player.disconnect()
+        return await ctx.respond("Disconnected.", reply=True)
 
     if await menus.YesNoView(False, True).send(ctx, f"Clear the queue and disconnect?"):
-        return await player.disconnect()
+        await player.disconnect()
+        return await ctx.respond("Disconnected.", reply=True)
 
 
 @audio_plugin.command
@@ -218,7 +224,7 @@ async def next(ctx: lightbulb.Context) -> None:
 
     current = player.current
     await player.skip()
-    await ctx.respond(f"Skipped {current.title} <{current.uri}>.", reply=True)
+    await ctx.respond(f"Skipped `{current.title}` <{current.uri}>.", reply=True)
 
 
 def string_to_timedelta(string: str) -> int:
@@ -262,7 +268,8 @@ async def seek(ctx: lightbulb.Context) -> None:
         current_position = datetime.timedelta(milliseconds=player.position)
         total_duration = datetime.timedelta(milliseconds=player.current.duration)
         return await ctx.respond(
-            f"**Seek info**\nTrack: `{player.current.title}`\nCurrent time: `{current_position}`\nDuration: `{total_duration}`"
+            f"**Seek info**\nTrack: `{player.current.title}`\nCurrent time: `{current_position}`\nDuration: `{total_duration}`",
+            reply=True
         )
 
     time = string_to_timedelta(ctx.options.time)
@@ -295,6 +302,7 @@ async def show_audio_subcommand(ctx: lightbulb.Context) -> None:
 
     await ctx.respond(f"Volume is currently: `{player.volume // 10}%`")
 
+MAX_VOLUME = 200
 
 @audio_group.child
 @lightbulb.option(
@@ -315,10 +323,14 @@ async def volume_subcommand(ctx: lightbulb.Context) -> None:
         return await ctx.respond("Nothing is playing.", reply=True)
 
     if not ctx.options.level:
-        return await ctx.respond(f"Volume is currently: `{player.volume // 10}%`")
+        return await ctx.respond(f"Volume is currently: `{int((player.volume / MAX_VOLUME) * 100)}%`", reply=True)
 
-    await player.set_volume(ctx.options.level * 10)
-    await ctx.respond(f"Set volume to: `{ctx.options.level}%`")
+    if ctx.options.level < 0 or ctx.options.level > 100:
+        raise errors.InvalidArgument(f"Volume must be between 0 and 100!")
+
+    volume = int((ctx.options.level / 100) * MAX_VOLUME)
+    await player.set_volume(volume)
+    await ctx.respond(f"Set volume to: `{ctx.options.level}%`", reply=True)
 
 
 @audio_group.child
@@ -349,46 +361,39 @@ async def show_playlist_subcommand(ctx: lightbulb.Context) -> None:
     lavalink_client = get_lavalink_client(ctx.bot)
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
-    if not player:
-        return await ctx.respond("Nothing is playing.", reply=True)
+    if not player or not player.queue:
+        return await ctx.respond("Nothing in the queue.", reply=True)
 
     embed = hikari.Embed(
-        title="Currently playing:",
-        description=f"`{player.current.title}`",
-        url=player.current.uri,
+        title=f"Playlist:",
+        description=f"Total queue: {len(player.queue)}\nTotal duration: `{datetime.timedelta(milliseconds=sum(track.duration for track in player.queue))}`",
+        url=player.queue[0].uri,
         color=ctx.author.accent_color,
         timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
     )
     embed.set_thumbnail(audio_plugin.bot.get_me().avatar_url)
-    if "youtube.com" in player.current.uri:
+    if "youtube.com" in player.queue[0].uri:
         embed.set_image(
-            f"https://img.youtube.com/vi/{player.current.identifier}/maxresdefault.jpg"
+            f"https://img.youtube.com/vi/{player.queue[0].identifier}/maxresdefault.jpg"
         )
 
-    if player.queue:
-        embed.add_field(
-            name=f"Total queue: {len(player.queue)}",
-            value=f"Total duration: `{datetime.timedelta(milliseconds=sum(track.duration for track in player.queue))}`",
-            inline=False,
-        )
-
-        page_values = []
-        page = 0
-        total_length = 0
-        for line in enumerate_playlist(player.queue):
-            if total_length + len(line) > constants.embeds.MAX_FIELD_CHARS:
-                embed.add_field(
-                    name=f"Next Up:" if page == 0 else "-",
-                    value="\n".join(page_values),
-                    inline=True,
-                )
-                page_values.clear()
-                page += 1
-                total_length = 0
-                if page > 1:
-                    break
-            page_values.append(line)
-            total_length += len(line)
+    page_values = []
+    page = 0
+    total_length = 0
+    for line in enumerate_playlist(player.queue):
+        if total_length + len(line) > constants.embeds.MAX_FIELD_CHARS:
+            embed.add_field(
+                name=f"Next Up:" if page == 0 else "-",
+                value="\n".join(page_values),
+                inline=True,
+            )
+            page_values.clear()
+            page += 1
+            total_length = 0
+            if page > 1:
+                break
+        page_values.append(line)
+        total_length += len(line)
 
     embed.set_footer(
         text=f"Requested by {ctx.author.username}", icon=ctx.author.avatar_url
@@ -451,7 +456,7 @@ async def shuffle_subcommand(ctx: lightbulb.Context) -> None:
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
     if not player or not player.queue:
-        return await ctx.respond("No queue to shuffle.", reply=True)
+        return await ctx.respond("Nothing in the queue.", reply=True)
 
     player.set_shuffle(not player.shuffle)
     await ctx.respond(f"Set shuffle to `{player.shuffle}`", reply=True)

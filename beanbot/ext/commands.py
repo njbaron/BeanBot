@@ -87,11 +87,17 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
                 type(exception), exception, exception.__traceback__
             )
         )
+        logger.error(backtrace)
         await event.context.respond(
             f":exclamation: Something went wrong during invocation of command `{event.context.command.name}`. "
             f"Please try again or let `{owner}` know something happened.",
             delete_after=10,
             reply=True,
+        )
+        backtrace = "".join(
+            traceback.format_exception(
+                type(exception), exception, exception.__traceback__, limit=15
+            )
         )
         await event.context.bot.rest.create_message(
             config.LOG_CHANNEL_ID,
@@ -99,7 +105,6 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
             f"When calling command {event.context.command.name}\n"
             f"```{backtrace}```",
         )
-        logger.error(backtrace)
 
 
 def load(bot: lightbulb.BotApp) -> None:
