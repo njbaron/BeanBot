@@ -7,7 +7,7 @@ import hikari
 import lavalink
 import lightbulb
 
-from beanbot import checks, errors
+from beanbot import checks, errors, constants, menus
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +58,7 @@ class AudioPlayer(lavalink.DefaultPlayer):
             return await ctx.respond(
                 f"No tracks found for `{ctx.options.query}`", reply=True
             )
+
         elif results.load_type in [lavalink.LoadType.PLAYLIST]:
             for track in results.tracks:
                 self.add(track, requester=ctx.author.id)
@@ -65,18 +66,25 @@ class AudioPlayer(lavalink.DefaultPlayer):
                 f"Added playlist with `{len(results.tracks)}` track(s) to the queue.",
                 reply=True,
             )
-        elif results.load_type in [lavalink.LoadType.TRACK, lavalink.LoadType.SEARCH]:
+
+        elif results.load_type in [lavalink.LoadType.TRACK]:
             track = results.tracks[0]
             self.add(track, requester=ctx.author.id)
             await ctx.respond(f"Added `{track.title}` to the queue.", reply=True)
-        # elif results.load_type in [lavalink.LoadType.SEARCH]:
-        #     track = await track_select_menu(ctx, results.tracks)
-        #     if not track:
-        #         return None
-        #     self.add(track, requester=ctx.author.id)
-        #     await ctx.respond(f"Added `{track.title}` to the queue.", reply=True)
+
+        elif results.load_type in [lavalink.LoadType.SEARCH]:
+            question = "What track would you like to add to the queue?"
+            placeholder = "Pick a track to play!"
+            track = await menus.TrackSelectView(results.tracks, placeholder).send(
+                ctx, question
+            )
+            if track:
+                self.add(track, requester=ctx.author.id)
+                await ctx.respond(f"Added `{track.title}` to the queue.", reply=True)
+            else:
+                await ctx.respond(f"No track selected from search.", reply=True)
+
         else:
-            logger.error(f"Unhandled load type {results.load_type}")
             raise errors.FindItemExcpetion(
                 f"Unable to handle the result {results.load_type}"
             )
@@ -172,12 +180,16 @@ async def stop(ctx: lightbulb.Context) -> None:
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
     if not player:
-        return await ctx.respond("Not conencted.", reply=True)
+        return await ctx.respond("Not connected.", reply=True)
 
-    if not player.is_playing:
+    if player.is_playing:
+        await player.stop()
+
+    if not player.queue:
         return await player.disconnect()
 
-    await player.stop()
+    if await menus.YesNoView(False, True).send(ctx, f"Clear the queue and disconnect?"):
+        return await player.disconnect()
 
 
 @audio_plugin.command
@@ -206,7 +218,7 @@ async def next(ctx: lightbulb.Context) -> None:
 
     current = player.current
     await player.skip()
-    await ctx.respond(f"Skipped {current.title}.", reply=True)
+    await ctx.respond(f"Skipped {current.title} <{current.uri}>.", reply=True)
 
 
 def string_to_timedelta(string: str) -> int:
@@ -304,6 +316,7 @@ async def volume_subcommand(ctx: lightbulb.Context) -> None:
 
     if not ctx.options.level:
         return await ctx.respond(f"Volume is currently: `{player.volume // 10}%`")
+
     await player.set_volume(ctx.options.level * 10)
     await ctx.respond(f"Set volume to: `{ctx.options.level}%`")
 
@@ -353,7 +366,6 @@ async def show_playlist_subcommand(ctx: lightbulb.Context) -> None:
         )
 
     if player.queue:
-
         embed.add_field(
             name=f"Total queue: {len(player.queue)}",
             value=f"Total duration: `{datetime.timedelta(milliseconds=sum(track.duration for track in player.queue))}`",
@@ -364,7 +376,7 @@ async def show_playlist_subcommand(ctx: lightbulb.Context) -> None:
         page = 0
         total_length = 0
         for line in enumerate_playlist(player.queue):
-            if total_length + len(line) > 1024:
+            if total_length + len(line) > constants.embeds.MAX_FIELD_CHARS:
                 embed.add_field(
                     name=f"Next Up:" if page == 0 else "-",
                     value="\n".join(page_values),
@@ -402,11 +414,15 @@ async def remove_subcommand(ctx: lightbulb.Context) -> None:
             f"Track value must be between {0} and {len(player.queue)}"
         )
 
-    track = player.queue.pop(track_index)
-    await ctx.respond(
-        f"Removed {track_index}. `{track.title}` <{track.uri}> from the queue.",
-        reply=True,
-    )
+    track = player.queue[track_index]
+    track_str = f"`{track_index}. '{track.title}'` <{track.uri}>"
+
+    question = f"Do you want to remove this from the queue?\n{track_str}"
+    if not await menus.YesNoView(False, True).send(ctx, question):
+        return await ctx.respond("Removed nothing.", reply=True)
+
+    player.queue.pop(track_index)
+    await ctx.respond(f"Removed from the queue!\n{track_str}", reply=True)
 
 
 @playlist_group.child
@@ -418,6 +434,10 @@ async def clear_subcommand(ctx: lightbulb.Context) -> None:
 
     if not player or not player.queue:
         return await ctx.respond("Nothing in the queue.", reply=True)
+
+    question = "Do you want to clear the queue?"
+    if not await menus.YesNoView(False, True).send(ctx, question):
+        return await ctx.respond("Did nothing!", reply=True)
 
     player.queue.clear()
     await ctx.respond(f"Cleared the queue.", reply=True)
