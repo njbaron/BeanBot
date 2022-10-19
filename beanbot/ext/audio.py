@@ -16,7 +16,10 @@ audio_plugin = lightbulb.Plugin(
 )
 audio_plugin.add_checks(checks.in_guild_voice_match_bot)
 
-url_rx = re.compile(r"https?://(?:www\.)?.+")
+URL_RX = re.compile(r"https?://(?:www\.)?.+")
+
+MAX_VOLUME = 200
+DEFAULT_VOLUME = 50
 
 
 def get_lavalink_client(bot: lightbulb.BotApp) -> lavalink.Client:
@@ -56,9 +59,7 @@ class AudioPlayer(lavalink.DefaultPlayer):
             lavalink.LoadType.LOAD_FAILED,
             lavalink.LoadType.NO_MATCHES,
         ]:
-            await ctx.respond(
-                f"No tracks found for `{ctx.options.query}`", reply=True
-            )
+            await ctx.respond(f"No tracks found for `{ctx.options.query}`", reply=True)
 
         elif results.load_type in [lavalink.LoadType.PLAYLIST]:
             for track in results.tracks:
@@ -89,7 +90,7 @@ class AudioPlayer(lavalink.DefaultPlayer):
             raise errors.FindItemExcpetion(
                 f"Unable to handle the result {results.load_type}"
             )
-        
+
         return queue_len != len(self.queue)
 
 
@@ -136,8 +137,6 @@ async def shard_payload_update(event: hikari.ShardPayloadEvent):
 #################################################
 ################# BASE COMMANDS #################
 #################################################
-
-
 @audio_plugin.command
 @lightbulb.option(
     "query",
@@ -157,7 +156,7 @@ async def play(ctx: lightbulb.Context) -> None:
 
     if ctx.options.query:
         query = ctx.options.query.strip("<>")
-        if not url_rx.match(query):
+        if not URL_RX.match(query):
             query = f"ytsearch:{query}"
         elif "watch?v=" in query:
             query = query.split("&list=")[0]
@@ -269,7 +268,7 @@ async def seek(ctx: lightbulb.Context) -> None:
         total_duration = datetime.timedelta(milliseconds=player.current.duration)
         return await ctx.respond(
             f"**Seek info**\nTrack: `{player.current.title}`\nCurrent time: `{current_position}`\nDuration: `{total_duration}`",
-            reply=True
+            reply=True,
         )
 
     time = string_to_timedelta(ctx.options.time)
@@ -302,7 +301,7 @@ async def show_audio_subcommand(ctx: lightbulb.Context) -> None:
 
     await ctx.respond(f"Volume is currently: `{player.volume // 10}%`")
 
-MAX_VOLUME = 200
+
 
 @audio_group.child
 @lightbulb.option(
@@ -323,7 +322,10 @@ async def volume_subcommand(ctx: lightbulb.Context) -> None:
         return await ctx.respond("Nothing is playing.", reply=True)
 
     if not ctx.options.level:
-        return await ctx.respond(f"Volume is currently: `{int((player.volume / MAX_VOLUME) * 100)}%`", reply=True)
+        return await ctx.respond(
+            f"Volume is currently: `{int((player.volume / MAX_VOLUME) * 100)}%`",
+            reply=True,
+        )
 
     if ctx.options.level < 0 or ctx.options.level > 100:
         raise errors.InvalidArgument(f"Volume must be between 0 and 100!")
