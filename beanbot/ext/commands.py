@@ -73,7 +73,7 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
         await event.context.respond(
             f":warning: Check failed: {exception}", delete_after=10, reply=True
         )
-    if isinstance(exception, errors.InvalidArgument):
+    elif isinstance(exception, errors.InvalidArgument):
         await event.context.respond(
             f":warning: Invalid argument passed: {exception}",
             delete_after=10,
@@ -96,7 +96,7 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
         )
         backtrace = "".join(
             traceback.format_exception(
-                type(exception), exception, exception.__traceback__, limit=15
+                type(exception), exception, exception.__traceback__, limit=5
             )
         )
         await event.context.bot.rest.create_message(

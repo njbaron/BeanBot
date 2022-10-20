@@ -2,10 +2,12 @@ import datetime
 import logging
 import re
 from typing import List
+import asyncio
 
 import hikari
 import lavalink
 import lightbulb
+import miru
 
 from beanbot import checks, errors, constants, menus
 
@@ -32,14 +34,163 @@ def get_lavalink_client(bot: lightbulb.BotApp) -> lavalink.Client:
         lavalink_client.add_node(
             "lavalink-server", 2333, "youshallnotpass", "us_west", "docker-node"
         )
-        # lavalink_client.add_event_hook(track_hook)
         bot.d.lavalink = lavalink_client
+    
+    bot.d.lavalink.add_event_hook(track_hook)
     return bot.d.lavalink
+
+
+async def track_hook(event: lavalink.Event) -> bool:
+    if isinstance(event, lavalink.TrackStartEvent):
+        track: lavalink.AudioTrack = event.track
+        player: "AudioPlayer" = event.player
+        logger.info(f"Started playing: {track.title}")
+        await player.ui_manager.send(track)
+    elif isinstance(
+        event,
+        (
+            lavalink.TrackEndEvent,
+            lavalink.TrackExceptionEvent,
+            lavalink.TrackStuckEvent,
+        ),
+    ):
+        track: lavalink.AudioTrack = event.track
+        player: "AudioPlayer" = event.player
+        logger.info(f"Stopped playing: {track.title}")
+        await player.ui_manager.stop(track)
+
+
+class TrackUi(miru.View):
+    def __init__(self, player: "AudioPlayer", track: lavalink.AudioTrack) -> None:
+        self.player = player
+        self.track = track
+        self.task = None
+
+        timeout = datetime.timedelta(hours=4)
+        super().__init__(timeout=timeout.total_seconds())
+
+    async def get_embed(self):
+        requester = await audio_plugin.bot.rest.fetch_user(self.track.requester)
+
+        embed = hikari.Embed(
+            title="Now Playing",
+            description=self.track.title,
+            url=self.track.uri,
+            timestamp=self.track.extra["request_time"],
+            color=requester.accent_color,
+        )
+        embed.set_thumbnail(audio_plugin.bot.get_me().avatar_url)
+        logger.info(self.track.uri)
+        if "youtube.com" in self.track.uri:
+            embed.set_image(
+                f"https://img.youtube.com/vi/{self.track.identifier}/maxresdefault.jpg"
+            )
+        else:
+            embed.set_image(requester.avatar_url)
+        upcoming = (
+            self.player.queue[0].title if len(self.player.queue) > 0 else "Nothing!"
+        )
+        embed.add_field(
+            name=(
+                f"__**{'Paused' if self.player.paused else 'Playing'}**__  -  "
+                f"**Volume**: {int((self.player.volume / MAX_VOLUME) * 100)}%  -  **Loop Mode**: {self.player.loop}"
+            ),
+            value=f"Next Up: *{upcoming}*",
+            inline=True,
+        )
+
+        embed.set_footer(
+            text=f"Requested by {requester.username}", icon=requester.avatar_url
+        )
+        return embed
+
+    async def send(self) -> bool:
+        if self.task:
+            return
+
+        channel: hikari.GuildTextChannel = await audio_plugin.bot.rest.fetch_channel(
+            self.track.extra.get("channel_id")
+        )
+        embed = await self.get_embed()
+        message = await channel.send(embed=embed, components=self.build())
+        self.start(message)
+        self.task = asyncio.create_task(self.wait())
+
+    async def update(self):
+        if not self.task:
+            return
+
+        embed = await self.get_embed()
+        await self.message.edit(embed=embed)
+
+    async def stop(self):
+        if not self.task:
+            return
+        super().stop()
+        await self.message.delete()
+        self.task.cancel()
+        self.task = None
+
+    @miru.button(label="⏯", style=hikari.ButtonStyle.SUCCESS)
+    async def play_button(self, button: miru.Button, ctx: miru.Context) -> None:
+        await self.player.set_pause(not self.player.paused)
+        await self.update()
+
+    @miru.button(label="⏭", style=hikari.ButtonStyle.PRIMARY)
+    async def next_button(self, button: miru.Button, ctx: miru.Context) -> None:
+        await self.player.skip()
+
+    @miru.button(label="🔁", style=hikari.ButtonStyle.PRIMARY)
+    async def repeat_button(self, button: miru.Button, ctx: miru.Context) -> None:
+        self.player.set_loop((self.player.loop + 1) % 3)
+        await self.update()
+
+    @miru.button(label="🔀", style=hikari.ButtonStyle.PRIMARY)
+    async def shuffle_button(self, button: miru.Button, ctx: miru.Context) -> None:
+        self.player.set_shuffle(not self.player.shuffle)
+        await self.update()
+
+    @miru.button(label="⏹", style=hikari.ButtonStyle.DANGER)
+    async def stop_button(self, button: miru.Button, ctx: miru.Context) -> None:
+        await self.player.stop()
+
+
+class UiManager:
+    def __init__(self, player: "AudioPlayer") -> None:
+        self.player = player
+        self._track_ui_dict = {}
+
+    async def send(self, track: lavalink.AudioTrack) -> hikari.Message:
+        track_ui = self._track_ui_dict.get(track.identifier)
+        if track_ui:
+            return
+
+        track_ui = TrackUi(self.player, track)
+        await track_ui.send()
+        self._track_ui_dict[track.identifier] = track_ui
+
+    async def update(self):
+        for _, track_ui in self._track_ui_dict.items():
+            await track_ui.update()
+
+    async def stop(self, track: lavalink.AudioTrack):
+        track_ui = self._track_ui_dict.get(track.identifier)
+        if not track_ui:
+            return
+
+        await track_ui.stop()
+        del self._track_ui_dict[track.identifier]
+
+    async def destroy(self):
+        for _, track_ui in self._track_ui_dict.items():
+            await track_ui.stop()
+        self._track_ui_dict = {}
 
 
 class AudioPlayer(lavalink.DefaultPlayer):
     def __init__(self, guild_id, node):
         super().__init__(guild_id, node)
+        self.ui_manager = UiManager(self)
 
     async def connect(self, voice_channel_id: int) -> None:
         await audio_plugin.bot.update_voice_state(
@@ -50,11 +201,21 @@ class AudioPlayer(lavalink.DefaultPlayer):
         await audio_plugin.bot.update_voice_state(self.guild_id, None)
         await self.destroy()
 
+    async def destroy(self):
+        await self.ui_manager.destroy()
+        return await super().destroy()
+
     async def add_tracks_from_results(
         self, ctx: lightbulb.Context, results: lavalink.LoadResult
     ) -> bool:
 
         queue_len = len(self.queue)
+
+        request_time = datetime.datetime.now(tz=datetime.timezone.utc)
+        for track in results.tracks:
+            track.extra["channel_id"] = ctx.channel_id
+            track.extra["request_time"] = request_time
+
         if not results or results.load_type in [
             lavalink.LoadType.LOAD_FAILED,
             lavalink.LoadType.NO_MATCHES,
@@ -106,8 +267,7 @@ async def start_lavalink(event: hikari.StartedEvent) -> None:
 async def stop_lavalink(event: hikari.StoppingEvent) -> None:
     lavalink_client = get_lavalink_client(audio_plugin.bot)
     for player in lavalink_client.player_manager.find_all():
-        # TODO: Close all open ui
-        pass
+        await player.ui_manager.destroy()
 
 
 @audio_plugin.listener(hikari.VoiceStateUpdateEvent)
@@ -164,6 +324,7 @@ async def play(ctx: lightbulb.Context) -> None:
         results: lavalink.LoadResult = await player.node.get_tracks(query)
         if not await player.add_tracks_from_results(ctx, results):
             return
+        await player.ui_manager.update()
 
     if not (ctx.options.query and player.paused):
         if not player.is_playing:
@@ -171,6 +332,7 @@ async def play(ctx: lightbulb.Context) -> None:
             await ctx.respond("Playing audio!", reply=True)
         elif player.paused:
             await player.set_pause(False)
+            await player.ui_manager.update()
             await ctx.respond("Resuming audio!", reply=True)
 
 
@@ -208,6 +370,7 @@ async def pause(ctx: lightbulb.Context) -> None:
         return await ctx.respond("Nothing is playing.", reply=True)
 
     await player.set_pause(True)
+    await player.ui_manager.update()
     await ctx.respond("Audio paused!", reply=True)
 
 
@@ -299,8 +462,9 @@ async def show_audio_subcommand(ctx: lightbulb.Context) -> None:
     if not player:
         return await ctx.respond("Nothing is playing.", reply=True)
 
-    await ctx.respond(f"Volume is currently: `{player.volume // 10}%`")
-
+    await ctx.respond(
+        f"Volume is currently: `{int((player.volume / MAX_VOLUME) * 100)}%`"
+    )
 
 
 @audio_group.child
@@ -332,6 +496,7 @@ async def volume_subcommand(ctx: lightbulb.Context) -> None:
 
     volume = int((ctx.options.level / 100) * MAX_VOLUME)
     await player.set_volume(volume)
+    await player.ui_manager.update()
     await ctx.respond(f"Set volume to: `{ctx.options.level}%`", reply=True)
 
 
@@ -429,6 +594,7 @@ async def remove_subcommand(ctx: lightbulb.Context) -> None:
         return await ctx.respond("Removed nothing.", reply=True)
 
     player.queue.pop(track_index)
+    await player.ui_manager.update()
     await ctx.respond(f"Removed from the queue!\n{track_str}", reply=True)
 
 
@@ -447,6 +613,7 @@ async def clear_subcommand(ctx: lightbulb.Context) -> None:
         return await ctx.respond("Did nothing!", reply=True)
 
     player.queue.clear()
+    await player.ui_manager.update()
     await ctx.respond(f"Cleared the queue.", reply=True)
 
 
@@ -461,13 +628,14 @@ async def shuffle_subcommand(ctx: lightbulb.Context) -> None:
         return await ctx.respond("Nothing in the queue.", reply=True)
 
     player.set_shuffle(not player.shuffle)
+    await player.ui_manager.update()
     await ctx.respond(f"Set shuffle to `{player.shuffle}`", reply=True)
 
 
 @playlist_group.child
 @lightbulb.option(
     "loop",
-    "The loop mode to set. 0 = No shuffle, 1 = Single Song, 2 = Whole Queue",
+    "The loop mode to set. 0 = No Loop, 1 = Single Song, 2 = Whole Queue",
     choices=[0, 1, 2],
     type=int,
     required=False,
@@ -488,6 +656,7 @@ async def repeat_subcommand(ctx: lightbulb.Context) -> None:
         player.set_loop(ctx.options.loop)
     except ValueError as ex:
         raise errors.InvalidArgument(str(ex))
+    await player.ui_manager.update()
     await ctx.respond(f"Set loop mode to: `{player.loop}`", reply=True)
 
 
@@ -496,4 +665,6 @@ def load(bot: lightbulb.BotApp) -> None:
 
 
 def unload(bot: lightbulb.BotApp) -> None:
+    lavalink_client = get_lavalink_client(bot)
+    lavalink_client._event_hooks.clear()
     bot.remove_plugin(audio_plugin)
