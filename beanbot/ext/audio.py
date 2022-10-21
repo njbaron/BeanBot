@@ -22,6 +22,7 @@ URL_RX = re.compile(r"https?://(?:www\.)?.+")
 
 MAX_VOLUME = 200
 DEFAULT_VOLUME = 50
+DELTA_VOLUME = 5
 
 
 def get_lavalink_client(bot: lightbulb.BotApp) -> lavalink.Client:
@@ -35,7 +36,7 @@ def get_lavalink_client(bot: lightbulb.BotApp) -> lavalink.Client:
             "lavalink-server", 2333, "youshallnotpass", "us_west", "docker-node"
         )
         bot.d.lavalink = lavalink_client
-    
+
     bot.d.lavalink.add_event_hook(track_hook)
     return bot.d.lavalink
 
@@ -60,6 +61,9 @@ async def track_hook(event: lavalink.Event) -> bool:
         await player.ui_manager.stop(track)
 
 
+LOOP_ICONS = {0: "⏺", 1: "🔂", 2: "🔁"}
+
+
 class TrackUi(miru.View):
     def __init__(self, player: "AudioPlayer", track: lavalink.AudioTrack) -> None:
         self.player = player
@@ -72,14 +76,36 @@ class TrackUi(miru.View):
     async def get_embed(self):
         requester = await audio_plugin.bot.rest.fetch_user(self.track.requester)
 
+        total_duration = datetime.timedelta(milliseconds=self.player.current.duration)
+        shuffle_icon = "⏺" if not self.player.shuffle else "🔀"
+        play_icon = "▶" if not self.player.paused else "⏸"
+        loop_icon = LOOP_ICONS[self.player.loop]
+        volume_percent = int((self.player.volume / MAX_VOLUME) * 100)
+
+        if volume_percent <= 0:
+            volume_icon = "🔇"
+        elif volume_percent > 50:
+            volume_icon = "🔊"
+        elif volume_percent < 50:
+            volume_icon = "🔉"
+
+        description = f"{total_duration} - {play_icon} {loop_icon} {shuffle_icon} - {volume_icon}: {volume_percent} %"
+
         embed = hikari.Embed(
-            title="Now Playing",
-            description=self.track.title,
+            title=self.track.title,
+            description=description,
             url=self.track.uri,
             timestamp=self.track.extra["request_time"],
             color=requester.accent_color,
         )
-        embed.set_thumbnail(audio_plugin.bot.get_me().avatar_url)
+        upcoming = (
+            self.player.queue[0].title if len(self.player.queue) > 0 else "Nothing!"
+        )
+        embed.add_field(
+            name="Next up:",
+            value=f"*{upcoming}*",
+            inline=True,
+        )
         logger.info(self.track.uri)
         if "youtube.com" in self.track.uri:
             embed.set_image(
@@ -87,18 +113,8 @@ class TrackUi(miru.View):
             )
         else:
             embed.set_image(requester.avatar_url)
-        upcoming = (
-            self.player.queue[0].title if len(self.player.queue) > 0 else "Nothing!"
-        )
-        embed.add_field(
-            name=(
-                f"__**{'Paused' if self.player.paused else 'Playing'}**__  -  "
-                f"**Volume**: {int((self.player.volume / MAX_VOLUME) * 100)}%  -  **Loop Mode**: {self.player.loop}"
-            ),
-            value=f"Next Up: *{upcoming}*",
-            inline=True,
-        )
 
+        embed.set_thumbnail(audio_plugin.bot.get_me().avatar_url)
         embed.set_footer(
             text=f"Requested by {requester.username}", icon=requester.avatar_url
         )
@@ -154,6 +170,34 @@ class TrackUi(miru.View):
     async def stop_button(self, button: miru.Button, ctx: miru.Context) -> None:
         await self.player.stop()
 
+    @miru.button(label="🔊", style=hikari.ButtonStyle.PRIMARY, row=2)
+    async def vol_up_button(self, button: miru.Button, ctx: miru.Context) -> None:
+        volume_delta = int((DELTA_VOLUME / 100) * MAX_VOLUME)
+        new_volume = self.player.volume + volume_delta
+        if new_volume > MAX_VOLUME:
+            await self.player.set_volume(MAX_VOLUME)
+        else:
+            await self.player.set_volume(self.player.volume + volume_delta)
+        await self.update()
+
+    @miru.button(label="🔉", style=hikari.ButtonStyle.PRIMARY, row=2)
+    async def vol_down_button(self, button: miru.Button, ctx: miru.Context) -> None:
+        volume_delta = int((DELTA_VOLUME / 100) * MAX_VOLUME)
+        new_volume = self.player.volume - volume_delta
+        if new_volume < 0:
+            await self.player.set_volume(0)
+        else:
+            await self.player.set_volume(self.player.volume - volume_delta)
+        await self.update()
+
+    @miru.button(label="🔇", style=hikari.ButtonStyle.PRIMARY, row=2)
+    async def vol_mute_button(self, button: miru.Button, ctx: miru.Context) -> None:
+        if self.player.volume > 0:
+            await self.player.set_volume(0)
+        else:
+            await self.player.set_volume(self.player.last_volume)
+        await self.update()
+
 
 class UiManager:
     def __init__(self, player: "AudioPlayer") -> None:
@@ -191,8 +235,10 @@ class AudioPlayer(lavalink.DefaultPlayer):
     def __init__(self, guild_id, node):
         super().__init__(guild_id, node)
         self.ui_manager = UiManager(self)
+        self.last_volume = DEFAULT_VOLUME
 
     async def connect(self, voice_channel_id: int) -> None:
+        await self.set_volume(DEFAULT_VOLUME)
         await audio_plugin.bot.update_voice_state(
             self.guild_id, voice_channel_id, self_deaf=True
         )
@@ -204,6 +250,10 @@ class AudioPlayer(lavalink.DefaultPlayer):
     async def destroy(self):
         await self.ui_manager.destroy()
         return await super().destroy()
+
+    async def set_volume(self, vol: int):
+        self.last_volume = self.volume
+        return await super().set_volume(vol)
 
     async def add_tracks_from_results(
         self, ctx: lightbulb.Context, results: lavalink.LoadResult
