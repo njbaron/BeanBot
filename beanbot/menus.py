@@ -1,11 +1,10 @@
-import hikari
-import lightbulb
-import miru
-import lavalink
-
+import logging
 from typing import Any, List, Optional
 
-import logging
+import hikari
+import lavalink
+import lightbulb
+import miru
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ class ResultView(miru.View):
         else:
             await msg.edit(components=None)
         return self.result
-
+ 
 
 class YesNoView(ResultView):
     def __init__(
@@ -56,49 +55,4 @@ class YesNoView(ResultView):
     @miru.button(label="No", style=hikari.ButtonStyle.DANGER)
     async def no_button(self, button: miru.Button, ctx: miru.Context) -> None:
         self.result = False
-        self.stop()
-
-
-class _TrackSelect(miru.Select):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-
-    async def callback(self, ctx: miru.Context) -> None:
-        self.view.result = self.view.find_track_from_id(ctx.interaction.values[0])
-        self.view.stop()
-
-
-class TrackSelectView(ResultView):
-    def __init__(
-        self,
-        possable_results: List[lavalink.AudioTrack],
-        placeholder: str,
-        default_result: Any = None,
-        delete_on_answer: bool = True,
-        *args,
-        **kwargs,
-    ) -> None:
-        super().__init__(default_result, delete_on_answer, *args, **kwargs)
-
-        self.track_results = possable_results
-        select_options = [
-            miru.SelectOption(
-                track.title,
-                track.identifier,
-                description=track.uri,
-                is_default=(index == 0),
-            )
-            for index, track in enumerate(possable_results)
-        ]
-        select_component = _TrackSelect(options=select_options, placeholder=placeholder)
-        self.add_item(select_component)
-
-    def find_track_from_id(self, track_id: str) -> lavalink.AudioTrack:
-        for track in self.track_results:
-            if track.identifier == track_id:
-                return track
-        return None
-
-    @miru.button(label="Cancel", style=hikari.ButtonStyle.DANGER)
-    async def cancel_button(self, button: miru.Button, ctx: miru.Context) -> None:
         self.stop()

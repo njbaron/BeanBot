@@ -1,15 +1,15 @@
+import asyncio
 import datetime
 import logging
 import re
 from typing import List
-import asyncio
 
 import hikari
 import lavalink
 import lightbulb
 import miru
 
-from beanbot import checks, errors, constants, menus
+from beanbot import checks, constants, errors, menus
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +61,96 @@ async def track_hook(event: lavalink.Event) -> bool:
         await player.ui_manager.stop(track)
 
 
+class TrackSelect(miru.Select):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+    async def callback(self, ctx: miru.Context) -> None:
+        self.view.result = self.view.find_track_from_id(ctx.interaction.values[0])
+        await self.view.update()
+
+
+class TrackSelectView(miru.View):
+    def __init__(
+        self,
+        query,
+        track_results: List[lavalink.AudioTrack],
+        placeholder: str,
+        *args,
+        **kwargs,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.result = None
+        self.query = query
+        self.timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        self.track_results = track_results
+        select_options = [
+            miru.SelectOption(
+                track.title,
+                track.identifier,
+                description=track.uri,
+                is_default=(index == 0),
+            )
+            for index, track in enumerate(track_results)
+        ]
+        select_component = TrackSelect(options=select_options, placeholder=placeholder)
+        self.add_item(select_component)
+
+    def get_embed(self):
+        embed = hikari.Embed(
+            title="Choose a track!",
+            description=f"Query: `{self.query}`",
+            timestamp=self.timestamp,
+        )
+        selected = "Nothing yet."
+        if self.result:
+            selected = f"[{self.result.title}]({self.result.uri})"
+        embed.add_field(
+            name="Selected",
+            value=selected,
+            inline=True,
+        )
+        if self.result and "youtube.com" in self.result.uri:
+            embed.set_image(
+                f"https://img.youtube.com/vi/{self.result.identifier}/maxresdefault.jpg"
+            )
+        else:
+            embed.set_image(audio_plugin.bot.get_me().avatar_url)
+
+        embed.set_thumbnail(audio_plugin.bot.get_me().avatar_url)
+        return embed
+
+    async def send(self, ctx: lightbulb.Context) -> lavalink.AudioTrack:
+        embed = self.get_embed()
+        resp = await ctx.respond(embed=embed, components=self.build())
+        msg = await resp.message()
+        self.start(msg)
+        await self.wait()
+        await msg.delete()
+        return self.result
+
+    async def update(self):
+        embed = self.get_embed()
+        await self.message.edit(embed=embed)
+
+    def find_track_from_id(self, track_id: str) -> lavalink.AudioTrack:
+        for track in self.track_results:
+            if track.identifier == track_id:
+                return track
+        return None
+
+    @miru.button(label="Accept", style=hikari.ButtonStyle.SUCCESS)
+    async def accept_button(self, button: miru.Button, ctx: miru.Context) -> None:
+        self.stop()
+
+    @miru.button(label="Cancel", style=hikari.ButtonStyle.DANGER)
+    async def cancel_button(self, button: miru.Button, ctx: miru.Context) -> None:
+        self.result = None
+        self.stop()
+
+
 LOOP_ICONS = {0: "⏺", 1: "🔂", 2: "🔁"}
 
 
@@ -84,10 +174,10 @@ class TrackUi(miru.View):
 
         if volume_percent <= 0:
             volume_icon = "🔇"
-        elif volume_percent > 50:
-            volume_icon = "🔊"
         elif volume_percent < 50:
             volume_icon = "🔉"
+        else:
+            volume_icon = "🔊"
 
         description = f"{total_duration} - {play_icon} {loop_icon} {shuffle_icon} - {volume_icon}: {volume_percent} %"
 
@@ -256,7 +346,7 @@ class AudioPlayer(lavalink.DefaultPlayer):
         return await super().set_volume(vol)
 
     async def add_tracks_from_results(
-        self, ctx: lightbulb.Context, results: lavalink.LoadResult
+        self, ctx: lightbulb.Context, query: str, results: lavalink.LoadResult
     ) -> bool:
 
         queue_len = len(self.queue)
@@ -286,11 +376,8 @@ class AudioPlayer(lavalink.DefaultPlayer):
             await ctx.respond(f"Added `{track.title}` to the queue.", reply=True)
 
         elif results.load_type in [lavalink.LoadType.SEARCH]:
-            question = "What track would you like to add to the queue?"
             placeholder = "Pick a track to play!"
-            track = await menus.TrackSelectView(results.tracks, placeholder).send(
-                ctx, question
-            )
+            track = await TrackSelectView(query, results.tracks, placeholder).send(ctx)
             if track:
                 self.add(track, requester=ctx.author.id)
                 await ctx.respond(f"Added `{track.title}` to the queue.", reply=True)
@@ -372,7 +459,7 @@ async def play(ctx: lightbulb.Context) -> None:
             query = query.split("&list=")[0]
 
         results: lavalink.LoadResult = await player.node.get_tracks(query)
-        if not await player.add_tracks_from_results(ctx, results):
+        if not await player.add_tracks_from_results(ctx, ctx.options.query, results):
             return
         await player.ui_manager.update()
 
