@@ -22,9 +22,6 @@ audio_plugin.add_checks(checks.in_guild_voice_match_bot)
 
 URL_RX = re.compile(r"https?://(?:www\.)?.+")
 
-MAX_VOLUME = 200
-DEFAULT_VOLUME = 50
-DELTA_VOLUME = 5
 
 THUMB_MAX_RES_URL = "https://img.youtube.com/vi/{}/maxresdefault.jpg"
 THUMB_DEFAULT_RES_URL = "https://img.youtube.com/vi/{}/default.jpg"
@@ -186,7 +183,9 @@ class TrackUi(miru.View):
         shuffle_icon = "⏺" if not self.player.shuffle else "🔀"
         play_icon = "▶" if not self.player.paused else "⏸"
         loop_icon = LOOP_ICONS[self.player.loop]
-        volume_percent = int((self.player.volume / MAX_VOLUME) * 100)
+        volume_percent = int(
+            (self.player.volume / constants.AudioConsts.MAX_VOLUME) * 100
+        )
 
         if volume_percent <= 0:
             volume_icon = "🔇"
@@ -214,9 +213,7 @@ class TrackUi(miru.View):
         )
         logger.info(self.track.uri)
         if "youtube.com" in self.track.uri:
-            embed.set_image(
-                f"https://img.youtube.com/vi/{self.track.identifier}/maxresdefault.jpg"
-            )
+            embed.set_image(await get_thumbnail(self.track.identifier))
         else:
             embed.set_image(requester.avatar_url)
 
@@ -276,24 +273,30 @@ class TrackUi(miru.View):
     async def stop_button(self, button: miru.Button, ctx: miru.Context) -> None:
         await self.player.stop()
 
-    @miru.button(label="🔊", style=hikari.ButtonStyle.PRIMARY, row=2)
-    async def vol_up_button(self, button: miru.Button, ctx: miru.Context) -> None:
-        volume_delta = int((DELTA_VOLUME / 100) * MAX_VOLUME)
-        new_volume = self.player.volume + volume_delta
-        if new_volume > MAX_VOLUME:
-            await self.player.set_volume(MAX_VOLUME)
-        else:
-            await self.player.set_volume(self.player.volume + volume_delta)
-        await self.update()
-
     @miru.button(label="🔉", style=hikari.ButtonStyle.PRIMARY, row=2)
     async def vol_down_button(self, button: miru.Button, ctx: miru.Context) -> None:
-        volume_delta = int((DELTA_VOLUME / 100) * MAX_VOLUME)
+        volume_delta = int(
+            (constants.AudioConsts.DELTA_VOLUME / 100)
+            * constants.AudioConsts.MAX_VOLUME
+        )
         new_volume = self.player.volume - volume_delta
         if new_volume < 0:
             await self.player.set_volume(0)
         else:
             await self.player.set_volume(self.player.volume - volume_delta)
+        await self.update()
+
+    @miru.button(label="🔊", style=hikari.ButtonStyle.PRIMARY, row=2)
+    async def vol_up_button(self, button: miru.Button, ctx: miru.Context) -> None:
+        volume_delta = int(
+            (constants.AudioConsts.DELTA_VOLUME / 100)
+            * constants.AudioConsts.MAX_VOLUME
+        )
+        new_volume = self.player.volume + volume_delta
+        if new_volume > constants.AudioConsts.MAX_VOLUME:
+            await self.player.set_volume(constants.AudioConsts.MAX_VOLUME)
+        else:
+            await self.player.set_volume(self.player.volume + volume_delta)
         await self.update()
 
     @miru.button(label="🔇", style=hikari.ButtonStyle.PRIMARY, row=2)
@@ -341,10 +344,10 @@ class AudioPlayer(lavalink.DefaultPlayer):
     def __init__(self, guild_id, node):
         super().__init__(guild_id, node)
         self.ui_manager = UiManager(self)
-        self.last_volume = DEFAULT_VOLUME
+        self.last_volume = constants.AudioConsts.DEFAULT_VOLUME
 
     async def connect(self, voice_channel_id: int) -> None:
-        await self.set_volume(DEFAULT_VOLUME)
+        await self.set_volume(constants.AudioConsts.DEFAULT_VOLUME)
         await audio_plugin.bot.update_voice_state(
             self.guild_id, voice_channel_id, self_deaf=True
         )
@@ -376,7 +379,11 @@ class AudioPlayer(lavalink.DefaultPlayer):
             lavalink.LoadType.LOAD_FAILED,
             lavalink.LoadType.NO_MATCHES,
         ]:
-            await ctx.respond(f"No tracks found for `{ctx.options.query}`", reply=True)
+            await ctx.respond(
+                f"No tracks found for `{ctx.options.query}`",
+                reply=True,
+                delete_after=constants.MessageConsts.DELETE_AFTER,
+            )
 
         elif results.load_type in [lavalink.LoadType.PLAYLIST]:
             for track in results.tracks:
@@ -384,21 +391,34 @@ class AudioPlayer(lavalink.DefaultPlayer):
             await ctx.respond(
                 f"Added playlist with `{len(results.tracks)}` track(s) to the queue.",
                 reply=True,
+                delete_after=constants.MessageConsts.DELETE_AFTER,
             )
 
         elif results.load_type in [lavalink.LoadType.TRACK]:
             track = results.tracks[0]
             self.add(track, requester=ctx.author.id)
-            await ctx.respond(f"Added `{track.title}` to the queue.", reply=True)
+            await ctx.respond(
+                f"Added `{track.title}` to the queue.",
+                reply=True,
+                delete_after=constants.MessageConsts.DELETE_AFTER,
+            )
 
         elif results.load_type in [lavalink.LoadType.SEARCH]:
             placeholder = "Pick a track to play!"
             track = await TrackSelectView(query, results.tracks, placeholder).send(ctx)
             if track:
                 self.add(track, requester=ctx.author.id)
-                await ctx.respond(f"Added `{track.title}` to the queue.", reply=True)
+                await ctx.respond(
+                    f"Added `{track.title}` to the queue.",
+                    reply=True,
+                    delete_after=constants.MessageConsts.DELETE_AFTER,
+                )
             else:
-                await ctx.respond(f"No track selected from search.", reply=True)
+                await ctx.respond(
+                    f"No track selected from search.",
+                    reply=True,
+                    delete_after=constants.MessageConsts.DELETE_AFTER,
+                )
 
         else:
             raise errors.FindItemExcpetion(
@@ -482,11 +502,19 @@ async def play(ctx: lightbulb.Context) -> None:
     if not (ctx.options.query and player.paused):
         if not player.is_playing:
             await player.play()
-            await ctx.respond("Playing audio!", reply=True)
+            await ctx.respond(
+                "Playing audio!",
+                reply=True,
+                delete_after=constants.MessageConsts.DELETE_AFTER,
+            )
         elif player.paused:
             await player.set_pause(False)
             await player.ui_manager.update()
-            await ctx.respond("Resuming audio!", reply=True)
+            await ctx.respond(
+                "Resuming audio!",
+                reply=True,
+                delete_after=constants.MessageConsts.DELETE_AFTER,
+            )
 
 
 @audio_plugin.command
@@ -497,19 +525,35 @@ async def stop(ctx: lightbulb.Context) -> None:
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
     if not player:
-        return await ctx.respond("Not connected.", reply=True)
+        return await ctx.respond(
+            "Not connected.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     if player.is_playing:
         await player.stop()
-        await ctx.respond("Audio stopped!", reply=True)
+        await ctx.respond(
+            "Audio stopped!",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     if not player.queue:
         await player.disconnect()
-        return await ctx.respond("Disconnected.", reply=True)
+        return await ctx.respond(
+            "Disconnected.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     if await menus.YesNoView(False, True).send(ctx, f"Clear the queue and disconnect?"):
         await player.disconnect()
-        return await ctx.respond("Disconnected.", reply=True)
+        return await ctx.respond(
+            "Disconnected.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
 
 @audio_plugin.command
@@ -520,11 +564,17 @@ async def pause(ctx: lightbulb.Context) -> None:
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
     if not player or not player.is_playing:
-        return await ctx.respond("Nothing is playing.", reply=True)
+        return await ctx.respond(
+            "Nothing is playing.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     await player.set_pause(True)
     await player.ui_manager.update()
-    await ctx.respond("Audio paused!", reply=True)
+    await ctx.respond(
+        "Audio paused!", reply=True, delete_after=constants.MessageConsts.DELETE_AFTER
+    )
 
 
 @audio_plugin.command
@@ -535,11 +585,19 @@ async def next(ctx: lightbulb.Context) -> None:
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
     if not player or not player.is_playing:
-        return await ctx.respond("Nothing is playing.", reply=True)
+        return await ctx.respond(
+            "Nothing is playing.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     current = player.current
     await player.skip()
-    await ctx.respond(f"Skipped `{current.title}` <{current.uri}>.", reply=True)
+    await ctx.respond(
+        f"Skipped `{current.title}` <{current.uri}>.",
+        reply=True,
+        delete_after=constants.MessageConsts.DELETE_AFTER,
+    )
 
 
 def string_to_timedelta(string: str) -> int:
@@ -577,7 +635,11 @@ async def seek(ctx: lightbulb.Context) -> None:
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
     if not player or not player.is_playing:
-        return await ctx.respond("Nothing is playing.", reply=True)
+        return await ctx.respond(
+            "Nothing is playing.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     if not ctx.options.time:
         current_position = datetime.timedelta(milliseconds=player.position)
@@ -585,11 +647,16 @@ async def seek(ctx: lightbulb.Context) -> None:
         return await ctx.respond(
             f"**Seek info**\nTrack: `{player.current.title}`\nCurrent time: `{current_position}`\nDuration: `{total_duration}`",
             reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
         )
 
     time = string_to_timedelta(ctx.options.time)
     await player.seek(time.total_seconds() * 1000)
-    await ctx.respond(f"Seeking to `{time}`", reply=True)
+    await ctx.respond(
+        f"Seeking to `{time}`",
+        reply=True,
+        delete_after=constants.MessageConsts.DELETE_AFTER,
+    )
 
 
 ##################################################
@@ -613,10 +680,16 @@ async def show_audio_subcommand(ctx: lightbulb.Context) -> None:
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
     if not player:
-        return await ctx.respond("Nothing is playing.", reply=True)
+        return await ctx.respond(
+            "Nothing is playing.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     await ctx.respond(
-        f"Volume is currently: `{int((player.volume / MAX_VOLUME) * 100)}%`"
+        f"Volume is currently: `{int((player.volume / constants.AudioConsts.MAX_VOLUME) * 100)}%`",
+        reply=True,
+        delete_after=constants.MessageConsts.DELETE_AFTER,
     )
 
 
@@ -636,21 +709,30 @@ async def volume_subcommand(ctx: lightbulb.Context) -> None:
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
     if not player:
-        return await ctx.respond("Nothing is playing.", reply=True)
+        return await ctx.respond(
+            "Nothing is playing.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     if not ctx.options.level:
         return await ctx.respond(
-            f"Volume is currently: `{int((player.volume / MAX_VOLUME) * 100)}%`",
+            f"Volume is currently: `{int((player.volume / constants.AudioConsts.MAX_VOLUME) * 100)}%`",
             reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
         )
 
     if ctx.options.level < 0 or ctx.options.level > 100:
         raise errors.InvalidArgument(f"Volume must be between 0 and 100!")
 
-    volume = int((ctx.options.level / 100) * MAX_VOLUME)
+    volume = int((ctx.options.level / 100) * constants.AudioConsts.MAX_VOLUME)
     await player.set_volume(volume)
     await player.ui_manager.update()
-    await ctx.respond(f"Set volume to: `{ctx.options.level}%`", reply=True)
+    await ctx.respond(
+        f"Set volume to: `{ctx.options.level}%`",
+        reply=True,
+        delete_after=constants.MessageConsts.DELETE_AFTER,
+    )
 
 
 @audio_group.child
@@ -658,7 +740,11 @@ async def volume_subcommand(ctx: lightbulb.Context) -> None:
 @lightbulb.command("eq", "Change the eq.")
 @lightbulb.implements(lightbulb.SlashSubCommand, lightbulb.PrefixSubCommand)
 async def eq_subcommand(ctx: lightbulb.Context) -> None:
-    await ctx.respond(f"Not implemented yet.", reply=True)
+    await ctx.respond(
+        f"Not implemented yet.",
+        reply=True,
+        delete_after=constants.MessageConsts.DELETE_AFTER,
+    )
 
 
 ################# PLAYLIST GROUP #################
@@ -682,7 +768,11 @@ async def show_playlist_subcommand(ctx: lightbulb.Context) -> None:
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
     if not player or not player.queue:
-        return await ctx.respond("Nothing in the queue.", reply=True)
+        return await ctx.respond(
+            "Nothing in the queue.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     embed = hikari.Embed(
         title=f"Playlist:",
@@ -701,7 +791,7 @@ async def show_playlist_subcommand(ctx: lightbulb.Context) -> None:
     page = 0
     total_length = 0
     for line in enumerate_playlist(player.queue):
-        if total_length + len(line) > constants.embeds.MAX_FIELD_CHARS:
+        if total_length + len(line) > constants.EmbedConsts.MAX_FIELD_CHARS:
             embed.add_field(
                 name=f"Next Up:" if page == 0 else "-",
                 value="\n".join(page_values),
@@ -719,7 +809,9 @@ async def show_playlist_subcommand(ctx: lightbulb.Context) -> None:
         text=f"Requested by {ctx.author.username}", icon=ctx.author.avatar_url
     )
 
-    await ctx.respond(embed=embed, reply=True)
+    await ctx.respond(
+        embed=embed, reply=True, delete_after=constants.MessageConsts.DELETE_AFTER
+    )
 
 
 @playlist_group.child
@@ -731,7 +823,11 @@ async def remove_subcommand(ctx: lightbulb.Context) -> None:
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
     if not player or not player.queue:
-        return await ctx.respond("Nothing in the queue.", reply=True)
+        return await ctx.respond(
+            "Nothing in the queue.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     track_index = ctx.options.track
     if 0 > track_index > len(player.queue):
@@ -744,11 +840,19 @@ async def remove_subcommand(ctx: lightbulb.Context) -> None:
 
     question = f"Do you want to remove this from the queue?\n{track_str}"
     if not await menus.YesNoView(False, True).send(ctx, question):
-        return await ctx.respond("Removed nothing.", reply=True)
+        return await ctx.respond(
+            "Removed nothing.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     player.queue.pop(track_index)
     await player.ui_manager.update()
-    await ctx.respond(f"Removed from the queue!\n{track_str}", reply=True)
+    await ctx.respond(
+        f"Removed from the queue!\n{track_str}",
+        reply=True,
+        delete_after=constants.MessageConsts.DELETE_AFTER,
+    )
 
 
 @playlist_group.child
@@ -759,15 +863,27 @@ async def clear_subcommand(ctx: lightbulb.Context) -> None:
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
     if not player or not player.queue:
-        return await ctx.respond("Nothing in the queue.", reply=True)
+        return await ctx.respond(
+            "Nothing in the queue.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     question = "Do you want to clear the queue?"
     if not await menus.YesNoView(False, True).send(ctx, question):
-        return await ctx.respond("Did nothing!", reply=True)
+        return await ctx.respond(
+            "Did nothing!",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     player.queue.clear()
     await player.ui_manager.update()
-    await ctx.respond(f"Cleared the queue.", reply=True)
+    await ctx.respond(
+        f"Cleared the queue.",
+        reply=True,
+        delete_after=constants.MessageConsts.DELETE_AFTER,
+    )
 
 
 @playlist_group.child
@@ -778,11 +894,19 @@ async def shuffle_subcommand(ctx: lightbulb.Context) -> None:
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
     if not player or not player.queue:
-        return await ctx.respond("Nothing in the queue.", reply=True)
+        return await ctx.respond(
+            "Nothing in the queue.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     player.set_shuffle(not player.shuffle)
     await player.ui_manager.update()
-    await ctx.respond(f"Set shuffle to `{player.shuffle}`", reply=True)
+    await ctx.respond(
+        f"Set shuffle to `{player.shuffle}`",
+        reply=True,
+        delete_after=constants.MessageConsts.DELETE_AFTER,
+    )
 
 
 @playlist_group.child
@@ -800,17 +924,29 @@ async def repeat_subcommand(ctx: lightbulb.Context) -> None:
     player: AudioPlayer = lavalink_client.player_manager.get(ctx.guild_id)
 
     if not player:
-        return await ctx.respond("Nothing is playing.", reply=True)
+        return await ctx.respond(
+            "Nothing is playing.",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     if not ctx.options.loop:
-        return await ctx.respond(f"Current loop mode is: `{player.loop}`", reply=True)
+        return await ctx.respond(
+            f"Current loop mode is: `{player.loop}`",
+            reply=True,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+        )
 
     try:
         player.set_loop(ctx.options.loop)
     except ValueError as ex:
         raise errors.InvalidArgument(str(ex))
     await player.ui_manager.update()
-    await ctx.respond(f"Set loop mode to: `{player.loop}`", reply=True)
+    await ctx.respond(
+        f"Set loop mode to: `{player.loop}`",
+        reply=True,
+        delete_after=constants.MessageConsts.DELETE_AFTER,
+    )
 
 
 def load(bot: lightbulb.BotApp) -> None:
