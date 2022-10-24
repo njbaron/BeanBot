@@ -1,6 +1,12 @@
 version: '3'
 
 services:
+  lavalink-server:
+    image: fredboat/lavalink:master
+    volumes: 
+      - "./configs/lavalink:/opt/Lavalink/config"
+      - "./data:/opt/Lavalink/data"
+
   beanbot:
     build: .
     env_file:
