@@ -1,4 +1,5 @@
 import logging
+import time
 
 import aiohttp
 import hikari
@@ -34,9 +35,10 @@ async def ready_listener(event: hikari.StartedEvent) -> None:
             type=hikari.ActivityType.PLAYING,
         ),
     )
-    # await bot.rest.create_message(
-    #     config.LOG_CHANNEL_ID, f"{__title__} `STARTED` at <t:{int(time.time())}>"
-    # )
+    if not config.BOT_DEV:
+        await bot.rest.create_message(
+            config.LOG_CHANNEL_ID, f"{__title__} `STARTED` at <t:{int(time.time())}>"
+        )
     logging.info(f"{__title__} is online!")
 
 
@@ -44,9 +46,10 @@ async def ready_listener(event: hikari.StartedEvent) -> None:
 async def stopping_listener(event: hikari.StoppingEvent) -> None:
     await bot.d.aio_session.close()
 
-    # await bot.rest.create_message(
-    #     config.LOG_CHANNEL_ID, f"{__title__} `STOPPED` at <t:{int(time.time())}>"
-    # )
+    if not config.BOT_DEV:
+        await bot.rest.create_message(
+            config.LOG_CHANNEL_ID, f"{__title__} `STOPPED` at <t:{int(time.time())}>"
+        )
     logging.info(f"{__title__} is offline!")
 
 
