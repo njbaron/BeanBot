@@ -22,8 +22,10 @@ class ResultView(miru.View):
         self.result = default_result
         self.delete_on_answer = delete_on_answer
 
-    async def send(self, ctx: lightbulb.Context, message: str) -> bool:
-        resp = await ctx.respond(message, components=self.build())
+    async def send(
+        self, ctx: lightbulb.Context, message: str = "", embed: hikari.Embed = None
+    ) -> bool:
+        resp = await ctx.respond(message, embed=embed, components=self.build())
         msg = await resp.message()
         self.start(msg)
         await self.wait()
@@ -32,7 +34,7 @@ class ResultView(miru.View):
         else:
             await msg.edit(components=None)
         return self.result
- 
+
 
 class YesNoView(ResultView):
     def __init__(

@@ -2,12 +2,14 @@ import asyncio
 import datetime
 import logging
 import re
-from typing import List
+from http import HTTPStatus
+from typing import Any, List
 
 import hikari
 import lavalink
 import lightbulb
 import miru
+from aiohttp import ClientSession
 
 from beanbot import checks, constants, errors, menus
 
@@ -23,6 +25,9 @@ URL_RX = re.compile(r"https?://(?:www\.)?.+")
 MAX_VOLUME = 200
 DEFAULT_VOLUME = 50
 DELTA_VOLUME = 5
+
+THUMB_MAX_RES_URL = "https://img.youtube.com/vi/{}/maxresdefault.jpg"
+THUMB_DEFAULT_RES_URL = "https://img.youtube.com/vi/{}/default.jpg"
 
 
 def get_lavalink_client(bot: lightbulb.BotApp) -> lavalink.Client:
@@ -61,29 +66,47 @@ async def track_hook(event: lavalink.Event) -> bool:
         await player.ui_manager.stop(track)
 
 
+async def get_thumbnail(idenifier: str) -> str:
+    aio_session: ClientSession = audio_plugin.bot.d.aio_session
+
+    async with aio_session.get(THUMB_MAX_RES_URL.format(idenifier)) as response:
+        if response.status == HTTPStatus.OK:
+            return THUMB_MAX_RES_URL.format(idenifier)
+
+    async with aio_session.get(THUMB_DEFAULT_RES_URL.format(idenifier)) as response:
+        if response.status == HTTPStatus.OK:
+            return THUMB_DEFAULT_RES_URL.format(idenifier)
+
+    logger.warning(f"could not find a thumbnail for identifier: {idenifier}")
+
+    return None
+
+
 class TrackSelect(miru.Select):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
     async def callback(self, ctx: miru.Context) -> None:
-        self.view.result = self.view.find_track_from_id(ctx.interaction.values[0])
+        self.view.selected = self.view.find_track_from_id(ctx.interaction.values[0])
         await self.view.update()
 
 
-class TrackSelectView(miru.View):
+class TrackSelectView(menus.ResultView):
     def __init__(
         self,
         query,
         track_results: List[lavalink.AudioTrack],
         placeholder: str,
+        default_result: Any = None,
+        delete_on_answer: bool = True,
         *args,
         **kwargs,
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(default_result, delete_on_answer, *args, **kwargs)
 
-        self.result = None
         self.query = query
         self.timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.selected = None
 
         self.track_results = track_results
         select_options = [
@@ -98,24 +121,22 @@ class TrackSelectView(miru.View):
         select_component = TrackSelect(options=select_options, placeholder=placeholder)
         self.add_item(select_component)
 
-    def get_embed(self):
+    async def get_embed(self):
         embed = hikari.Embed(
             title="Choose a track!",
             description=f"Query: `{self.query}`",
             timestamp=self.timestamp,
         )
         selected = "Nothing yet."
-        if self.result:
-            selected = f"[{self.result.title}]({self.result.uri})"
+        if self.selected:
+            selected = f"[{self.selected.title}]({self.selected.uri})"
         embed.add_field(
             name="Selected",
             value=selected,
             inline=True,
         )
-        if self.result and "youtube.com" in self.result.uri:
-            embed.set_image(
-                f"https://img.youtube.com/vi/{self.result.identifier}/maxresdefault.jpg"
-            )
+        if self.selected and "youtube.com" in self.selected.uri:
+            embed.set_image(await get_thumbnail(self.selected.identifier))
         else:
             embed.set_image(audio_plugin.bot.get_me().avatar_url)
 
@@ -123,16 +144,11 @@ class TrackSelectView(miru.View):
         return embed
 
     async def send(self, ctx: lightbulb.Context) -> lavalink.AudioTrack:
-        embed = self.get_embed()
-        resp = await ctx.respond(embed=embed, components=self.build())
-        msg = await resp.message()
-        self.start(msg)
-        await self.wait()
-        await msg.delete()
-        return self.result
+        embed = await self.get_embed()
+        return await super().send(ctx, embed=embed)
 
     async def update(self):
-        embed = self.get_embed()
+        embed = await self.get_embed()
         await self.message.edit(embed=embed)
 
     def find_track_from_id(self, track_id: str) -> lavalink.AudioTrack:
@@ -143,11 +159,11 @@ class TrackSelectView(miru.View):
 
     @miru.button(label="Accept", style=hikari.ButtonStyle.SUCCESS)
     async def accept_button(self, button: miru.Button, ctx: miru.Context) -> None:
+        self.result = self.selected
         self.stop()
 
     @miru.button(label="Cancel", style=hikari.ButtonStyle.DANGER)
     async def cancel_button(self, button: miru.Button, ctx: miru.Context) -> None:
-        self.result = None
         self.stop()
 
 
