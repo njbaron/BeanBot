@@ -36,7 +36,7 @@ async def nutella_quesionaire(ctx: lightbulb.Context) -> None:
     # What have you eaten today?
     # Anything else: Hmm the odds are in your favor that it is nutella time. =]
     # Nutalla: Look like you have already spent your rations for today. Maybe some <Insert Katie Desert item here> peanutbutter and chololate chips would be better?
-    # 1-100 chance to say, "I cannot decide. Maybe you should see if Nick will bring you some?"
+    # 1-100 chance to say, "I cannot decide. Maybe you should see if Nick will bring you some?" 
     await ctx.respond(f"WIP", delete_after=MessageConsts.DELETE_AFTER)
 
 
