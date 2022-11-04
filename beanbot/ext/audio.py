@@ -10,6 +10,7 @@ import lavalink
 import lightbulb
 import miru
 from aiohttp import ClientSession
+from lightbulb import events
 
 from beanbot import checks, constants, errors, menus
 
@@ -465,6 +466,20 @@ async def shard_payload_update(event: hikari.ShardPayloadEvent):
         lavalink_client = get_lavalink_client(audio_plugin.bot)
         lavalink_data = {"t": event.name, "d": dict(event.payload)}
         await lavalink_client.voice_update_handler(lavalink_data)
+
+
+@audio_plugin.set_error_handler
+async def audio_plugin_error_handler(event: events.CommandErrorEvent) -> None:
+
+    # Unwrap the exception to get the original cause
+    exception = event.exception.__cause__ or event.exception
+
+    if isinstance(exception, lavalink.errors.NodeError):
+        return await event.context.respond(
+            f":warning: No player nodes are connected, audio commands maybe not be available. Please try again later.",
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+            reply=True,
+        )
 
 
 #################################################
