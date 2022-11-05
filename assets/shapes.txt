@@ -1,0 +1,20 @@
+nonagon
+octagon
+heptagon
+hexagon
+triangle
+scalene triangle
+right triangle
+parallelogram
+rhombus
+square
+pentagon
+circle
+oval
+heart
+cross
+arrow
+cube
+cylinder
+star
+crescent

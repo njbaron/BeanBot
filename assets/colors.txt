@@ -1,0 +1,31 @@
+azure
+aqua
+brown
+bronze
+blue
+black
+yellow
+white
+wheat
+violet
+turquoise
+tomato
+teal
+silver
+salmon
+red
+purple
+pink
+orange
+olive
+navy blue
+navy
+maroon
+lime
+grey
+green
+gold
+dark blue
+cyan
+cyan
+chocolate
