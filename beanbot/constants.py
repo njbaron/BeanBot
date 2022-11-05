@@ -14,5 +14,6 @@ class MessageConsts(IntEnum):
 class EmbedConsts(IntEnum):
     MAX_FIELD_CHARS = 1024
 
+
 class MenuConstants(IntEnum):
     MAX_SELECT_OPTIONS = 25

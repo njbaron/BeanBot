@@ -177,6 +177,13 @@ class TrackUi(miru.View):
         timeout = datetime.timedelta(hours=4)
         super().__init__(timeout=timeout.total_seconds())
 
+    async def view_check(self, ctx: miru.Context) -> bool:
+        voice_state = audio_plugin.bot.cache.get_voice_states_view_for_channel(
+            self.player.guild_id, self.player.channel_id
+        )
+        voice_channel_members = [item.user_id for item in voice_state.values()]
+        return ctx.user.id in voice_channel_members
+
     async def get_embed(self):
         requester = await audio_plugin.bot.rest.fetch_user(self.track.requester)
 

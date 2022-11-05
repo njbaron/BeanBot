@@ -71,7 +71,9 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
         )
     elif isinstance(exception, lightbulb.CheckFailure):
         await event.context.respond(
-            f":warning: Check failed: {exception}", delete_after=constants.MessageConsts.DELETE_AFTER, reply=True
+            f":warning: Check failed: {exception}",
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+            reply=True,
         )
     elif isinstance(exception, errors.InvalidArgument):
         await event.context.respond(
