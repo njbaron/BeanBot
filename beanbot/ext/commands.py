@@ -5,7 +5,7 @@ import traceback
 import lightbulb
 from lightbulb import events
 
-from beanbot import config, errors
+from beanbot import config, constants, errors
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
         )[0]
         return await event.context.respond(
             f":warning: Unknown command `{bad_command}`. Did you mean `{possible_command}`?",
-            delete_after=10,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
             reply=True,
         )
 
@@ -54,7 +54,7 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
     elif isinstance(exception, lightbulb.CommandIsOnCooldown):
         await event.context.respond(
             f":warning: This command is on cooldown. Retry in `{exception.retry_after:.2f}` seconds.",
-            delete_after=10,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
             reply=True,
         )
     elif isinstance(exception, lightbulb.NotEnoughArguments):
@@ -66,17 +66,19 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
         )
         await event.context.respond(
             f":warning: Missing required argument(s): ```{missing_option_str}```",
-            delete_after=10,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
             reply=True,
         )
     elif isinstance(exception, lightbulb.CheckFailure):
         await event.context.respond(
-            f":warning: Check failed: {exception}", delete_after=10, reply=True
+            f":warning: Check failed: {exception}",
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+            reply=True,
         )
     elif isinstance(exception, errors.InvalidArgument):
         await event.context.respond(
             f":warning: Invalid argument passed: {exception}",
-            delete_after=10,
+            delete_after=constants.MessageConsts.DELETE_AFTER,
             reply=True,
         )
     else:
@@ -90,8 +92,8 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
         logger.error(backtrace)
         await event.context.respond(
             f":exclamation: Something went wrong during invocation of command `{event.context.command.name}`. "
-            f"Please try again or let `{owner}` know something happened.",
-            delete_after=10,
+            f"Please try again. If it continues let `{owner}` know something happened.",
+            delete_after=constants.MessageConsts.DELETE_AFTER,
             reply=True,
         )
         backtrace = "".join(
@@ -101,7 +103,7 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
         )
         await event.context.bot.rest.create_message(
             config.LOG_CHANNEL_ID,
-            f":exclamation: An error occured!\n"
+            f":exclamation: An error occurred!\n"
             f"When calling command {event.context.command.name}\n"
             f"```{backtrace}```",
         )

@@ -10,6 +10,7 @@ import lavalink
 import lightbulb
 import miru
 from aiohttp import ClientSession
+from lightbulb import events
 
 from beanbot import checks, constants, errors, menus
 
@@ -175,6 +176,13 @@ class TrackUi(miru.View):
 
         timeout = datetime.timedelta(hours=4)
         super().__init__(timeout=timeout.total_seconds())
+
+    async def view_check(self, ctx: miru.Context) -> bool:
+        voice_state = audio_plugin.bot.cache.get_voice_states_view_for_channel(
+            self.player.guild_id, self.player.channel_id
+        )
+        voice_channel_members = [item.user_id for item in voice_state.values()]
+        return ctx.user.id in voice_channel_members
 
     async def get_embed(self):
         requester = await audio_plugin.bot.rest.fetch_user(self.track.requester)
@@ -465,6 +473,20 @@ async def shard_payload_update(event: hikari.ShardPayloadEvent):
         lavalink_client = get_lavalink_client(audio_plugin.bot)
         lavalink_data = {"t": event.name, "d": dict(event.payload)}
         await lavalink_client.voice_update_handler(lavalink_data)
+
+
+@audio_plugin.set_error_handler
+async def audio_plugin_error_handler(event: events.CommandErrorEvent) -> None:
+
+    # Unwrap the exception to get the original cause
+    exception = event.exception.__cause__ or event.exception
+
+    if isinstance(exception, lavalink.errors.NodeError):
+        return await event.context.respond(
+            f":warning: No player nodes are connected, audio commands maybe not be available. Please try again later.",
+            delete_after=constants.MessageConsts.DELETE_AFTER,
+            reply=True,
+        )
 
 
 #################################################
