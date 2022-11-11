@@ -12,7 +12,7 @@ import miru
 from aiohttp import ClientSession
 from lightbulb import events
 
-from beanbot import checks, constants, errors, menus
+from beanbot import checks, config, constants, errors, menus
 
 logger = logging.getLogger(__name__)
 
@@ -28,17 +28,37 @@ THUMB_MAX_RES_URL = "https://img.youtube.com/vi/{}/maxresdefault.jpg"
 THUMB_DEFAULT_RES_URL = "https://img.youtube.com/vi/{}/default.jpg"
 
 
+async def task_check_and_connect_nodes():
+    await asyncio.sleep(10)
+    logger.debug(f"Starting reconnect task.")
+    while True:
+        lavalink_client = get_lavalink_client(audio_plugin.bot)
+        for node in lavalink_client.node_manager.nodes:
+            logger.debug(f"checking node {node.name}")
+            if not node.available:
+                logger.debug(f"attempting reconnecting to node {node.name}")
+                node._ws.connect()
+            else:
+                logger.debug(f"node connected {node.name}")
+
+        await asyncio.sleep(60)
+
+
 def get_lavalink_client(bot: lightbulb.BotApp) -> lavalink.Client:
     if bot.d.lavalink is None:
         logger.info("Building lavalink client")
         lavalink_client = lavalink.Client(bot.get_me().id, player=AudioPlayer)
-        lavalink_client.add_node(
-            "127.0.0.1", 2333, "youshallnotpass", "us_west", "local-node"
-        )
-        lavalink_client.add_node(
-            "lavalink-server", 2333, "youshallnotpass", "us_west", "docker-node"
-        )
+        for server in config.LAVALINK_SERVERS:
+            lavalink_client.add_node(
+                host=server.host,
+                port=server.port,
+                password=server.password,
+                region=server.region,
+                name=server.name,
+                reconnect_attempts=1,
+            )
         bot.d.lavalink = lavalink_client
+        asyncio.create_task(task_check_and_connect_nodes())
 
     bot.d.lavalink.add_event_hook(track_hook)
     return bot.d.lavalink
