@@ -1,20 +1,65 @@
 import logging
 import os
-from typing import Any, List
+from pathlib import Path
 
 import dotenv
+import yaml
+
+from beanbot.errors import ConfigException
 
 logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
 
 
-def env_to_list(env_val: str, split_car: str = ":") -> List[Any]:
-    return [item.strip() for item in env_val.split(split_car)]
+BOT_DEV = Path(".dev").exists() or os.getenv("BOT_DEV")
+
+_DEFAULT_CONFIG_FILE = Path("./application.yaml")
+CONFIG_FILE = (
+    _DEFAULT_CONFIG_FILE
+    if _DEFAULT_CONFIG_FILE.exists()
+    else Path(os.getenv("BOT_CONFIG_FILE"))
+)
+
+with CONFIG_FILE.open("r") as reader:
+    _config = yaml.safe_load(reader)
 
 
-BOT_DEV = os.getenv("BOT_DEV")
-BOT_PREFIX = os.getenv("BOT_PREFIX")
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-GUILD_IDS = env_to_list(os.getenv("GUILD_IDS"))
-LOG_CHANNEL_ID = os.getenv("LOG_CHANNEL_ID")
+BOT_TOKEN = _config.get("token")
+BOT_PREFIX = _config.get("prefix")
+LOG_CHANNEL_ID = _config.get("log_channel_id")
+GUILD_IDS = _config.get("guild_ids", [])
+
+
+class LavalinkServer:
+    def __init__(self, config_dict: dict) -> None:
+        try:
+            self.name = config_dict["name"]
+            self.host = config_dict["host"]
+            self.port = config_dict["port"]
+            self.password = config_dict["password"]
+            self.region = config_dict["region"]
+        except KeyError as ex:
+            raise ConfigException(
+                f"LavalinkServer failed to find {ex} key in {CONFIG_FILE}:{config_dict}"
+            )
+
+
+LAVALINK_SERVERS = [LavalinkServer(item) for item in _config.get("lavalink", [])]
+
+
+class StableDiffustionServer:
+    def __init__(self, config_dict: dict) -> None:
+        try:
+            self.name = config_dict["name"]
+            self.host = config_dict["host"]
+            self.port = config_dict["port"]
+        except KeyError as ex:
+            raise ConfigException(
+                f"StableDiffustionServer failed to find {ex} key in {CONFIG_FILE}:{config_dict}"
+            )
+
+
+STABLE_DIFFUSION_SERVERS = [
+    StableDiffustionServer(item) for item in _config.get("stable-diffusion", [])
+]
