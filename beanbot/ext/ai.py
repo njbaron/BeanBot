@@ -63,9 +63,6 @@ def get_aiohttp_client(bot: lightbulb.BotApp) -> aiohttp.ClientSession:
     return bot.d.aio_session
 
 
-
-
-
 message_tasks = {}
 
 

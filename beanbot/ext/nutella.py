@@ -18,7 +18,6 @@ DAY_FILE = Path("assets/day.txt")
 
 
 @nutella_plugin.command
-# Only Katie command?
 @lightbulb.command("nutella", "Is it nutella time?")
 @lightbulb.implements(lightbulb.PrefixCommand, lightbulb.SlashCommand)
 async def nutella_quesionaire(ctx: lightbulb.Context) -> None:
