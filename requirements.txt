@@ -1,7 +1,8 @@
-hikari-lightbulb==2.2.4
+hikari==2.0.0.dev112
+hikari-lightbulb==2.2.5
 hikari-miru==1.1.2
-hikari==2.0.0.dev111
-lavalink==4.0.3
-psutil==5.9.2
+lavalink==4.0.4
+psutil==5.9.4
 python-dotenv==0.21.0
+PyYAML==6.0
 uvloop>=0.16.0; sys_platform != "win32"
