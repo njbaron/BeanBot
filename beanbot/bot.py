@@ -16,6 +16,7 @@ bot = lightbulb.BotApp(
     prefix=lightbulb.when_mentioned_or(config.BOT_PREFIX),
     default_enabled_guilds=config.GUILD_IDS,
     banner=str(__title__).lower(),
+    intents=hikari.Intents.ALL,
 )
 miru.load(bot)
 

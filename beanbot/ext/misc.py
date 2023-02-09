@@ -1,13 +1,47 @@
+import logging
 import random
 from random import choice
 
 import hikari
 import lightbulb
 
+HELLO_STRINGS = [
+    "hola",
+    "hi",
+    "hello",
+    "hi-ya",
+    "howdy",
+    "greetings",
+    "bonjour",
+    "whats up",
+    "wazzup",
+    "yo",
+    "sup",
+    "morning",
+]
+GOODBYE_STRINGS = [
+    "bye",
+    "goodbye",
+    "farewell",
+    "peace",
+    "deuces",
+    "chiao",
+    "adios",
+    "aurevoir",
+    "adieu",
+    "so long",
+    "hasta la vista",
+    "night",
+    "good night",
+]
+
+
 text_plugin = lightbulb.Plugin(
     name="Text",
     description="Commands the modify things that the users type to the bot.",
 )
+
+logger = logging.getLogger(__name__)
 
 
 @text_plugin.command
@@ -125,6 +159,55 @@ async def roll_dice(ctx: lightbulb.Context) -> None:
 async def toss_coin(ctx: lightbulb.Context) -> None:
     responses = ["Heads", "Tails"]
     await ctx.respond(f"Flipping Coin: ```{random.choice(responses)}```")
+
+
+def greeting_in_message(message: str, greeting_list: list) -> bool:
+    """Determines if a greeting in the greeting list is in the message.
+    Item must occur once at the beginning of the message.
+
+    Args:
+        message (str): Message being evaluated.
+        greeting_list (list): Greetings list being checked for.
+
+    Returns:
+        bool: True if found. False if not.
+    """
+    for item in greeting_list:
+        if item in message:
+            message_split = [i.strip() for i in message.split(item)]
+            logger.debug(message_split)
+            if (
+                len(message_split) == 2
+                and len(message_split[0]) == 0
+                and len(message_split[1]) == 0
+            ):
+                return True
+            else:
+                break
+    return False
+
+
+@text_plugin.listener(hikari.MessageCreateEvent)
+async def on_message_invoke(event: hikari.MessageCreateEvent):
+    logger.info(f"Received message event: {event}")
+    if not event.is_human:
+        return
+
+    message_content = event.message.content.lower()
+
+    # Check for someone saying hello or goodbye to the bot.
+    if "bot" in message_content:
+        message_split = message_content.split("bot")[0]
+        channel_id = event.message.channel_id
+        if greeting_in_message(message_split, HELLO_STRINGS):
+            logger.info(f"{event.message.author} said hello")
+            await text_plugin.bot.rest.create_message(
+                channel_id, f"Hello {event.message.author.mention}!"
+            )
+        elif greeting_in_message(message_split, GOODBYE_STRINGS):
+            await text_plugin.bot.rest.create_message(
+                channel_id, f"Goodbye {event.message.author.mention}!"
+            )
 
 
 def load(bot: lightbulb.BotApp) -> None:
