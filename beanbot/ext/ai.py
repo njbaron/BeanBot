@@ -1,17 +1,17 @@
 import asyncio
+import base64
+import copy
+import io
 import json
 import logging
-import copy
 import time
 from datetime import timedelta
-from typing import List
+from http import HTTPStatus
+from typing import List, Optional
 
 import aiohttp
-import lightbulb
 import hikari
-
-import io
-import base64
+import lightbulb
 from PIL import Image, PngImagePlugin
 
 from beanbot import config
@@ -19,6 +19,207 @@ from beanbot import config
 logger = logging.getLogger(__name__)
 
 ai_plugin = lightbulb.Plugin(name="AI", description="Using ai to do things.")
+
+
+class StableDiffustionEndpoints:
+    LOGIN: str = "/login/"
+    PREDICT: str = "/api/predict"
+    SAMPLERS: str = "/sdapi/v1/samplers"
+    MODELS: str = "/sdapi/v1/sd-models"
+    PROGRESS: str = "/sdapi/v1/progress"
+    TEXT2IMG: str = "/sdapi/v1/txt2img"
+    IMG2IMG: str = "/sdapi/v1/img2img"
+
+
+class Sampler:
+    def __init__(self, name, aliases, options, *args, **kwargs) -> None:
+        self.name = name
+        self.aliases = (aliases,)
+        self.options = options
+        self.args = args
+        self.kwargs = kwargs
+
+
+class Model:
+    def __init__(
+        self, title, model_name, hash, filename, config, *args, **kwargs
+    ) -> None:
+        self.title = title
+        self.model_name = model_name
+        self.hash = hash
+        self.filename = filename
+        self.config = config
+        self.args = args
+        self.kwargs = kwargs
+
+
+class Node:
+    def __init__(
+        self,
+        hostname: str,
+        port: int,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+    ) -> None:
+        self.__hostname = hostname
+        self.__port = port
+        self.__username = username
+        self.__password = password
+
+        self.__models: List[Model] = []
+        self.__samplers: List[Sampler] = {}
+
+        url = f"{hostname}:{port}"
+        self.__session = aiohttp.ClientSession(url)
+
+    @property
+    def hostname(self):
+        return self.__hostname
+
+    @property
+    def port(self):
+        return self.__port
+
+    @property
+    def session(self):
+        return self.__session
+
+    @property
+    def models(self):
+        return self.__models
+
+    @property
+    def samplers(self):
+        return self.__samplers
+
+    async def get_models(self, refresh: bool = False) -> List[Model]:
+        if self.models and not refresh:
+            return self.models
+
+        self.__models.clear()
+
+        async with self.session.get(StableDiffustionEndpoints.MODELS) as response:
+            if response.status != HTTPStatus.OK:
+                logger.warning(f"get models returns bad status! {response.status}")
+
+            self.__models.extend([Model(**item) for item in await response.json()])
+            return self.models
+
+    async def get_samplers(self, refresh: bool = False) -> List[Sampler]:
+        if self.samplers and not refresh:
+            return self.samplers
+
+        self.__samplers.clear()
+
+        async with self.session.get(StableDiffustionEndpoints.SAMPLERS) as response:
+            if response.status != HTTPStatus.OK:
+                logger.warning(f"get samplers returns bad status! {response.status}")
+
+            self.__samplers.extend([Sampler(**item) for item in await response.json()])
+
+            return self.samplers
+
+    async def get_progress(self):
+        async with self.session.get(StableDiffustionEndpoints.PROGRESS) as response:
+            if response.status != HTTPStatus.OK:
+                logger.warning(f"get progress returns bad status! {response.status}")
+
+            return await response.json()
+
+    def __eq__(self, __o: object) -> bool:
+        return (
+            isinstance(__o, Node)
+            and self.hostname == __o.hostname
+            and self.port == __o.port
+        )
+
+    def __hash__(self) -> int:
+        pass
+
+
+class Client:
+    def __init__(self) -> None:
+        self.__nodes: List[Node] = []
+        self.__availible_models = dict[str, List[Node]] = {}
+        self.__availible_samplers = dict[str, List[Node]] = {}
+
+    @property
+    def nodes(self) -> List[Node]:
+        return self.__nodes
+
+    @property
+    def availible_models(self) -> List[str]:
+        return list(self.__availible_models.keys())
+
+    @property
+    def availible_samplers(self) -> List[str]:
+        return list(self.__availible_samplers.keys())
+
+    async def add_node(
+        self,
+        hostname: str,
+        port: int,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+    ) -> None:
+
+        new_node = Node(hostname, port, username, password)
+
+        for node in self.nodes:
+            if node == new_node:
+                return
+
+        self.__nodes.append(new_node)
+        await self.update_attrs(new_node)
+
+    async def update_attrs(self, node: Node):
+        models = await node.get_models(True)
+        samplers = await node.get_samplers(True)
+
+        for model in models:
+            nodes_with_model = self.__availible_models.get(model.model_name, [])
+            nodes_with_model.append(node)
+            nodes_with_model = list(set(nodes_with_model))
+            self.__availible_models.update({model.model_name: nodes_with_model})
+
+        for sampler in samplers:
+            nodes_with_sampler = self.__availible_samplers.get(sampler.name, [])
+            nodes_with_sampler.append(node)
+            nodes_with_sampler = list(set(nodes_with_sampler))
+            self.__availible_samplers.update({sampler.name: nodes_with_sampler})
+
+    async def refresh_all_attrs(self):
+        self.__availible_models.clear()
+        self.__availible_samplers.clear()
+
+        for node in self.nodes:
+            await self.update_attrs(node)
+
+    async def get_node(self, model: str = None, sampler: str = None):
+        pass
+
+
+LOGIN_TEMPLATE = {"username": "", "password": ""}
+
+MODEL_CHANGE_TEMPLATE = {"fn_index": 0, "data": [""]}
+
+# IMG_TEMPLATE = {
+#     "prompt": queue_object.prompt,
+#     "negative_prompt": queue_object.negative_prompt,
+#     "steps": queue_object.steps,
+#     "height": queue_object.height,
+#     "width": queue_object.width,
+#     "cfg_scale": queue_object.guidance_scale,
+#     "sampler_index": queue_object.sampler,
+#     "seed": queue_object.seed,
+#     "seed_resize_from_h": 0,
+#     "seed_resize_from_w": 0,
+#     "denoising_strength": None,
+#     "n_iter": queue_object.batch_count,
+#     "styles": [
+#         queue_object.style
+#     ]
+# }
 
 REQUEST_TEMPLATE = {
     "prompt": "",
@@ -50,13 +251,13 @@ REQUEST_TEMPLATE = {
     "override_settings": {},
 }
 
+# image = base64.b64encode(requests.get(queue_object.init_image.url, stream=True).content).decode('utf-8')
+INIT_IMAGE_TEMPLATE = {
+    "init_images": ["data:image/png;base64," + "base 64 encoded image"],
+    "denoising_strength": 0,
+}
 
-class StableDiffustionEndpoints:
-    SAMPLERS: str = "/sdapi/v1/samplers"
-    MODELS: str = "/sdapi/v1/sd-models"
-    PROGRESS: str = "/sdapi/v1/progress"
-    TEXT2IMG: str = "/sdapi/v1/txt2img"
-    IMG2IMG: str = "/sdapi/v1/img2img"
+FACE_FIX_SETTINGS_TEMPLATE = {"face_restoration_model": ""}
 
 
 def get_aiohttp_client(bot: lightbulb.BotApp) -> aiohttp.ClientSession:
@@ -83,7 +284,7 @@ message_tasks = {}
     type=int,
     min_value=1,
     max_value=150,
-    default=50,
+    default=20,
     required=False,
 )
 @lightbulb.option(
@@ -163,7 +364,7 @@ message_tasks = {}
     required=False,
 )
 @lightbulb.option("tiling", "Enable tiling.", type=bool, default=False, required=False)
-@lightbulb.command("diffuse", "Run some stable diffusion.")
+@lightbulb.command("diffuse", "Create images.")
 @lightbulb.implements(lightbulb.SlashCommand)
 async def stable_diffuse(ctx: lightbulb.Context) -> None:
 
