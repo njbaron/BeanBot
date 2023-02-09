@@ -14,7 +14,7 @@ dotenv.load_dotenv()
 
 BOT_DEV = Path(".dev").exists() or os.getenv("BOT_DEV")
 
-_DEFAULT_CONFIG_FILE = Path("./application.yaml")
+_DEFAULT_CONFIG_FILE = Path("./configs/application.yaml")
 CONFIG_FILE = (
     _DEFAULT_CONFIG_FILE
     if _DEFAULT_CONFIG_FILE.exists()

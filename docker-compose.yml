@@ -9,5 +9,7 @@ services:
 
   beanbot:
     build: .
-    env_file:
-      - "./.env"
+    volumes: 
+      - "./configs/:/configs"
+    environment:
+      - BOT_CONFIG_FILE=/configs/application.yaml
