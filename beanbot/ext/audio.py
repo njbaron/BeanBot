@@ -23,7 +23,6 @@ audio_plugin.add_checks(checks.in_guild_voice_match_bot)
 
 URL_RX = re.compile(r"https?://(?:www\.)?.+")
 
-
 THUMB_MAX_RES_URL = "https://img.youtube.com/vi/{}/maxresdefault.jpg"
 THUMB_DEFAULT_RES_URL = "https://img.youtube.com/vi/{}/default.jpg"
 
@@ -375,10 +374,13 @@ class AudioPlayer(lavalink.DefaultPlayer):
         self.last_volume = constants.AudioConsts.DEFAULT_VOLUME
 
     async def connect(self, voice_channel_id: int) -> None:
-        await self.set_volume(constants.AudioConsts.DEFAULT_VOLUME)
-        await audio_plugin.bot.update_voice_state(
-            self.guild_id, voice_channel_id, self_deaf=True
-        )
+        if not self.is_connected:
+            await self.set_volume(constants.AudioConsts.DEFAULT_VOLUME)
+
+        if self.channel_id != voice_channel_id:
+            await audio_plugin.bot.update_voice_state(
+                self.guild_id, voice_channel_id, self_deaf=True
+            )
 
     async def disconnect(self) -> None:
         await audio_plugin.bot.update_voice_state(self.guild_id, None)
