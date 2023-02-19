@@ -13,3 +13,4 @@ services:
       - "./configs/:/configs"
     environment:
       - BOT_CONFIG_FILE=/configs/application.yaml
+      - BOT_DEV=True

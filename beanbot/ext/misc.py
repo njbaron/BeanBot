@@ -1,6 +1,7 @@
 import logging
 import random
 from random import choice
+import asyncio
 
 import hikari
 import lightbulb
@@ -189,8 +190,11 @@ def greeting_in_message(message: str, greeting_list: list) -> bool:
 
 @text_plugin.listener(hikari.MessageCreateEvent)
 async def on_message_invoke(event: hikari.MessageCreateEvent):
-    logger.info(f"Received message event: {event}")
+    logger.debug(f"Received message event: {event}")
     if not event.is_human:
+        return
+
+    if not event.message.content:
         return
 
     message_content = event.message.content.lower()
@@ -200,11 +204,12 @@ async def on_message_invoke(event: hikari.MessageCreateEvent):
         message_split = message_content.split("bot")[0]
         channel_id = event.message.channel_id
         if greeting_in_message(message_split, HELLO_STRINGS):
-            logger.info(f"{event.message.author} said hello")
+            await asyncio.sleep(0.2)
             await text_plugin.bot.rest.create_message(
                 channel_id, f"Hello {event.message.author.mention}!"
             )
         elif greeting_in_message(message_split, GOODBYE_STRINGS):
+            await asyncio.sleep(0.2)
             await text_plugin.bot.rest.create_message(
                 channel_id, f"Goodbye {event.message.author.mention}!"
             )

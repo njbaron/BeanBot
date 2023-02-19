@@ -440,7 +440,8 @@ async def stable_diffuse(ctx: lightbulb.Context) -> None:
 
 
 def load(bot: lightbulb.BotApp) -> None:
-    bot.add_plugin(ai_plugin)
+    if False:
+        bot.add_plugin(ai_plugin)
 
 
 def unload(bot: lightbulb.BotApp) -> None:
