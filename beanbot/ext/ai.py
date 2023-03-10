@@ -162,7 +162,6 @@ class Client:
         username: Optional[str] = None,
         password: Optional[str] = None,
     ) -> None:
-
         new_node = Node(hostname, port, username, password)
 
         for node in self.nodes:
@@ -367,7 +366,6 @@ message_tasks = {}
 @lightbulb.command("diffuse", "Create images.")
 @lightbulb.implements(lightbulb.SlashCommand)
 async def stable_diffuse(ctx: lightbulb.Context) -> None:
-
     resp = await ctx.respond(f"Let me create `{ctx.options.prompt}`", reply=True)
     message = await resp.message()
 

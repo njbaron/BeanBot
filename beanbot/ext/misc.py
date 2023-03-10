@@ -127,21 +127,25 @@ dice_types = {"d4": 4, "d6": 6, "d8": 8, "d10": 10, "d12": 12, "d20": 20, "d100"
     "dice", "The type of dice to roll.", type=str, choices=list(dice_types.keys())
 )
 @lightbulb.option(
-    "number",
+    "quantity",
     "The number of dice to roll.",
     type=int,
     default=1,
     min_value=1,
     max_value=100,
 )
-@lightbulb.option("offset", "A number to offset the roll.", type=int, default=0)
+@lightbulb.option("modifier", "A number to offset the roll.", type=int, default=0)
+@lightbulb.option("name", "Name of the roll.", type=str, required=False)
 @lightbulb.command("roll", "Roll some dice.")
 @lightbulb.implements(lightbulb.PrefixCommand, lightbulb.SlashCommand)
 async def roll_dice(ctx: lightbulb.Context) -> None:
-    number = ctx.options.number
+    number = ctx.options.quantity
     dice = ctx.options.dice
     sides = dice_types[dice]
-    offset = ctx.options.offset
+    offset = ctx.options.modifier
+    name = ctx.options.name
+
+    title = f"`{name}`" if name else f"`{number}{dice}`"
 
     response = [random.randint(1, sides) for _ in range(number)]
     total = sum(response) + offset
@@ -149,9 +153,10 @@ async def roll_dice(ctx: lightbulb.Context) -> None:
     response_str = " + ".join(str(x) for x in response)
     if offset:
         response_str += f" + ({offset})"
-    response_str += f" = {total}" if len(response) > 1 else ""
+    if offset or (len(response) > 1):
+        response_str += f" = {total}"
 
-    await ctx.respond(f"Rolling `{number}{dice}`: ```{response_str}```")
+    await ctx.respond(f"Rolling {title}: ```{response_str}```")
 
 
 @text_plugin.command

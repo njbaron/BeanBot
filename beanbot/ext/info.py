@@ -27,7 +27,6 @@ info_plugin = lightbulb.Plugin(
 @lightbulb.command("userinfo", "Get info on a server member.")
 @lightbulb.implements(lightbulb.PrefixCommand, lightbulb.SlashCommand)
 async def userinfo(ctx: lightbulb.Context) -> None:
-
     target = ctx.get_guild().get_member(ctx.options.target or ctx.user)
     logger.info(f"{target}")
 

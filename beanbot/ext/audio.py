@@ -397,7 +397,6 @@ class AudioPlayer(lavalink.DefaultPlayer):
     async def add_tracks_from_results(
         self, ctx: lightbulb.Context, query: str, results: lavalink.LoadResult
     ) -> bool:
-
         queue_len = len(self.queue)
 
         request_time = datetime.datetime.now(tz=datetime.timezone.utc)
@@ -499,7 +498,6 @@ async def shard_payload_update(event: hikari.ShardPayloadEvent):
 
 @audio_plugin.set_error_handler
 async def audio_plugin_error_handler(event: events.CommandErrorEvent) -> None:
-
     # Unwrap the exception to get the original cause
     exception = event.exception.__cause__ or event.exception
 

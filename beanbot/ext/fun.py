@@ -13,7 +13,6 @@ fun_plugin = lightbulb.Plugin(
 @lightbulb.command("fun", "All the entertainment commands you'll ever need")
 @lightbulb.implements(lightbulb.SlashCommandGroup, lightbulb.PrefixCommandGroup)
 async def fun_group(ctx: lightbulb.Context) -> None:
-
     pass  # as slash commands cannot have their top-level command ran, we simply pass here
 
 
@@ -21,11 +20,9 @@ async def fun_group(ctx: lightbulb.Context) -> None:
 @lightbulb.command("meme", "Get a meme")
 @lightbulb.implements(lightbulb.SlashSubCommand, lightbulb.PrefixSubCommand)
 async def meme_subcommand(ctx: lightbulb.Context) -> None:
-
     async with ctx.bot.d.aio_session.get(
         "https://meme-api.herokuapp.com/gimme"
     ) as response:
-
         res = await response.json()
 
         if response.ok and res["nsfw"] != True:
@@ -60,7 +57,6 @@ ANIMALS = {
 @lightbulb.command("animal", "Get a fact + picture of a cute animal :3")
 @lightbulb.implements(lightbulb.SlashSubCommand, lightbulb.PrefixSubCommand)
 async def animal_subcommand(ctx: lightbulb.Context) -> None:
-
     select_menu = (
         ctx.bot.rest.build_action_row()
         .add_select_menu("animal_select")
@@ -68,7 +64,6 @@ async def animal_subcommand(ctx: lightbulb.Context) -> None:
     )
 
     for name, emoji in ANIMALS.items():
-
         select_menu.add_option(
             name,  # the label, which users see
             name.lower().replace(" ", "_"),  # the value, which is used by us later
@@ -82,7 +77,6 @@ async def animal_subcommand(ctx: lightbulb.Context) -> None:
     msg = await resp.message()
 
     try:
-
         event = await ctx.bot.wait_for(
             hikari.InteractionCreateEvent,
             timeout=60,
@@ -93,16 +87,13 @@ async def animal_subcommand(ctx: lightbulb.Context) -> None:
         )
 
     except asyncio.TimeoutError:
-
         await msg.edit("The menu timed out :c", components=[])
 
     else:
-
         animal = event.interaction.values[0]
         async with ctx.bot.d.aio_session.get(
             f"https://some-random-api.ml/animal/{animal}"
         ) as res:
-
             if res.ok:
                 res = await res.json()
                 embed = hikari.Embed(description=res["fact"], colour=0x3B9DFF)
