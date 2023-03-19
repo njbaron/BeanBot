@@ -2,6 +2,7 @@ import logging
 import random
 from random import choice
 import asyncio
+import re
 
 import hikari
 import lightbulb
@@ -119,48 +120,45 @@ async def magic_8ball(ctx: lightbulb.Context) -> None:
     await ctx.respond(f"Question: {question}\n`Answer: {choice(responses)}`")
 
 
-dice_types = {"d4": 4, "d6": 6, "d8": 8, "d10": 10, "d12": 12, "d20": 20, "d100": 100}
+dice_regex = r"(\d*)([dD]\d+)([+-]\d+)?"
 
 
 @text_plugin.command
-@lightbulb.option(
-    "dice", "The type of dice to roll.", type=str, choices=list(dice_types.keys())
-)
-@lightbulb.option(
-    "quantity",
-    "The number of dice to roll.",
-    type=int,
-    default=1,
-    min_value=1,
-    max_value=100,
-)
-@lightbulb.option("modifier", "A number to offset the roll.", type=int, default=0)
+@lightbulb.option("dice_in", "A number to offset the roll.", type=str)
 @lightbulb.option("name", "Name of the roll.", type=str, required=False)
-@lightbulb.command("roll", "Roll some dice.")
+@lightbulb.command("dice", "Roll some dice.")
 @lightbulb.implements(lightbulb.PrefixCommand, lightbulb.SlashCommand)
 async def roll_dice(ctx: lightbulb.Context) -> None:
-    number = ctx.options.quantity
-    dice = ctx.options.dice
-    sides = dice_types[dice]
-    offset = ctx.options.modifier
+    dice_in = ctx.options.dice_in
     name = ctx.options.name
 
-    title = f"`{name}`" if name else f"`{number}{dice}`"
+    dice_match = re.findall(dice_regex, dice_in)
+    if not dice_match:
+        return await ctx.respond(
+            f"unable to find the dice. Please use the format 5d10+4"
+        )
+
+    number, dice, modifier = dice_match[0]
+    number = int(number if number else 1)
+    sides = int(dice[1:])
+    modifier = int(modifier if modifier else 0)
+
+    title = f"`{name}`" if name else f"`{dice_in}`"
 
     response = [random.randint(1, sides) for _ in range(number)]
-    total = sum(response) + offset
+    total = sum(response) + modifier
 
     response_str = " + ".join(str(x) for x in response)
-    if offset:
-        response_str += f" + ({offset})"
-    if offset or (len(response) > 1):
+    if modifier:
+        response_str += f" + ({modifier})"
+    if modifier or (len(response) > 1):
         response_str += f" = {total}"
 
     await ctx.respond(f"Rolling {title}: ```{response_str}```")
 
 
 @text_plugin.command
-@lightbulb.command("flip", "Flips a coin.", aliases=["toss"])
+@lightbulb.command("coin", "Flips a coin.", aliases=["toss"])
 @lightbulb.implements(lightbulb.PrefixCommand, lightbulb.SlashCommand)
 async def toss_coin(ctx: lightbulb.Context) -> None:
     responses = ["Heads", "Tails"]
