@@ -6,6 +6,7 @@ services:
     volumes: 
       - "./configs/lavalink:/opt/Lavalink/config"
       - "./data:/opt/Lavalink/data"
+    restart: unless-stopped
 
   beanbot:
     build: .
@@ -13,4 +14,5 @@ services:
       - "./configs/:/configs"
     environment:
       - BOT_CONFIG_FILE=/configs/application.yaml
-      - BOT_DEV=True
+        #      - BOT_DEV=True
+    restart: unless-stopped
