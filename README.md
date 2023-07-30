@@ -4,12 +4,16 @@ A test of the hikari - Lightbulb discord bot api in preparation for discord.py o
 
 ## Running the bot
 
-Create an `.env` file with the following contents filled in.
+Create an `application.yaml` file at the project root with the following contents filled in.
 
 ```shell
-BOT_TOKEN=<token>
-GUILD_ID=<guild to update with slash commands>
-LOG_CHANNEL_ID=<Channel to log things to>
+token: <token>
+
+prefix: <prefix character(s)> 
+log_channel_id: <guild channel id>
+guild_ids:
+  - <guild id>
+  - <guild id>
 ```
 
 Run the bot

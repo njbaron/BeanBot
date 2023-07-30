@@ -1,6 +1,10 @@
 import lightbulb
 
 
+class ConfigException(Exception):
+    pass
+
+
 class NotInVoiceChannel(lightbulb.CheckFailure):
     pass
 

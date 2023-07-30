@@ -27,7 +27,6 @@ async def on_command_complete(event: events.CommandCompletionEvent):
 
 @commands_plugin.listener(events.CommandErrorEvent)
 async def on_command_error(event: events.CommandErrorEvent) -> None:
-
     # Unwrap the exception to get the original cause
     exception = event.exception.__cause__ or event.exception
 
