@@ -33,9 +33,7 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
     if isinstance(exception, lightbulb.CommandNotFound):
         all_commands = list(event.bot.prefix_commands.keys())
         bad_command = exception.invoked_with
-        possible_command = difflib.get_close_matches(
-            bad_command, all_commands, n=1, cutoff=0.1
-        )[0]
+        possible_command = difflib.get_close_matches(bad_command, all_commands, n=1, cutoff=0.1)[0]
         return await event.context.respond(
             f":warning: Unknown command `{bad_command}`. Did you mean `{possible_command}`?",
             delete_after=constants.MessageConsts.DELETE_AFTER,
@@ -47,9 +45,7 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
     )
 
     if isinstance(exception, lightbulb.NotOwner):
-        await event.context.respond(
-            ":warning: This feature is restricted to the owner of this bot."
-        )
+        await event.context.respond(":warning: This feature is restricted to the owner of this bot.")
     elif isinstance(exception, lightbulb.CommandIsOnCooldown):
         await event.context.respond(
             f":warning: This command is on cooldown. Retry in `{exception.retry_after:.2f}` seconds.",
@@ -57,12 +53,7 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
             reply=True,
         )
     elif isinstance(exception, lightbulb.NotEnoughArguments):
-        missing_option_str = "\n".join(
-            [
-                f"{option.name}: {option.description}"
-                for option in exception.missing_options
-            ]
-        )
+        missing_option_str = "\n".join([f"{option.name}: {option.description}" for option in exception.missing_options])
         await event.context.respond(
             f":warning: Missing required argument(s): ```{missing_option_str}```",
             delete_after=constants.MessageConsts.DELETE_AFTER,
@@ -83,11 +74,7 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
     else:
         owner_ids = await event.context.bot.fetch_owner_ids()
         owner = await event.context.bot.rest.fetch_user(owner_ids[0])
-        backtrace = "".join(
-            traceback.format_exception(
-                type(exception), exception, exception.__traceback__
-            )
-        )
+        backtrace = "".join(traceback.format_exception(type(exception), exception, exception.__traceback__))
         logger.error(backtrace)
         await event.context.respond(
             f":exclamation: Something went wrong during invocation of command `{event.context.command.name}`. "
@@ -95,11 +82,7 @@ async def on_command_error(event: events.CommandErrorEvent) -> None:
             delete_after=constants.MessageConsts.DELETE_AFTER,
             reply=True,
         )
-        backtrace = "".join(
-            traceback.format_exception(
-                type(exception), exception, exception.__traceback__, limit=5
-            )
-        )
+        backtrace = "".join(traceback.format_exception(type(exception), exception, exception.__traceback__, limit=5))
         await event.context.bot.rest.create_message(
             config.LOG_CHANNEL_ID,
             f":exclamation: An error occurred!\n"

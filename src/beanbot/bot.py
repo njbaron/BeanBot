@@ -7,7 +7,8 @@ import lightbulb
 import miru
 from lightbulb import commands, context
 
-from beanbot import __title__, __version__, config
+from beanbot.__about__ import __title__, __version__
+from beanbot import config
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +38,7 @@ async def ready_listener(event: hikari.StartedEvent) -> None:
         ),
     )
     if not config.BOT_DEV:
-        await bot.rest.create_message(
-            config.LOG_CHANNEL_ID, f"{__title__} `STARTED` at <t:{int(time.time())}>"
-        )
+        await bot.rest.create_message(config.LOG_CHANNEL_ID, f"{__title__} `STARTED` at <t:{int(time.time())}>")
     logging.info(f"{__title__} is online!")
 
 
@@ -48,9 +47,7 @@ async def stopping_listener(event: hikari.StoppingEvent) -> None:
     await bot.d.aio_session.close()
 
     if not config.BOT_DEV:
-        await bot.rest.create_message(
-            config.LOG_CHANNEL_ID, f"{__title__} `STOPPED` at <t:{int(time.time())}>"
-        )
+        await bot.rest.create_message(config.LOG_CHANNEL_ID, f"{__title__} `STOPPED` at <t:{int(time.time())}>")
     logging.info(f"{__title__} is offline!")
 
 
@@ -107,5 +104,5 @@ async def reload_ext(ctx: context.Context) -> None:
 @lightbulb.command("logout", "Shuts the bot down", aliases=["shutdown"], hidden=True)
 @lightbulb.implements(commands.PrefixCommand)
 async def logout_bot(ctx: context.Context) -> None:
-    await ctx.respond(f"Shutting the bot down")
+    await ctx.respond("Shutting the bot down")
     await bot.close()

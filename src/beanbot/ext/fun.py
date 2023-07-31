@@ -20,12 +20,10 @@ async def fun_group(ctx: lightbulb.Context) -> None:
 @lightbulb.command("meme", "Get a meme")
 @lightbulb.implements(lightbulb.SlashSubCommand, lightbulb.PrefixSubCommand)
 async def meme_subcommand(ctx: lightbulb.Context) -> None:
-    async with ctx.bot.d.aio_session.get(
-        "https://meme-api.herokuapp.com/gimme"
-    ) as response:
+    async with ctx.bot.d.aio_session.get("https://meme-api.herokuapp.com/gimme") as response:
         res = await response.json()
 
-        if response.ok and res["nsfw"] != True:
+        if response.ok and res["nsfw"] is not True:
             link = res["postLink"]
             title = res["title"]
             img_url = res["url"]
@@ -35,9 +33,7 @@ async def meme_subcommand(ctx: lightbulb.Context) -> None:
             await ctx.respond(embed)
 
         else:
-            await ctx.respond(
-                "Could not fetch a meme :c", flags=hikari.MessageFlag.EPHEMERAL
-            )
+            await ctx.respond("Could not fetch a meme :c", flags=hikari.MessageFlag.EPHEMERAL)
 
 
 ANIMALS = {
@@ -57,11 +53,7 @@ ANIMALS = {
 @lightbulb.command("animal", "Get a fact + picture of a cute animal :3")
 @lightbulb.implements(lightbulb.SlashSubCommand, lightbulb.PrefixSubCommand)
 async def animal_subcommand(ctx: lightbulb.Context) -> None:
-    select_menu = (
-        ctx.bot.rest.build_action_row()
-        .add_select_menu("animal_select")
-        .set_placeholder("Pick an animal")
-    )
+    select_menu = ctx.bot.rest.build_action_row().add_select_menu("animal_select").set_placeholder("Pick an animal")
 
     for name, emoji in ANIMALS.items():
         select_menu.add_option(
@@ -91,17 +83,13 @@ async def animal_subcommand(ctx: lightbulb.Context) -> None:
 
     else:
         animal = event.interaction.values[0]
-        async with ctx.bot.d.aio_session.get(
-            f"https://some-random-api.ml/animal/{animal}"
-        ) as res:
+        async with ctx.bot.d.aio_session.get(f"https://some-random-api.ml/animal/{animal}") as res:
             if res.ok:
                 res = await res.json()
                 embed = hikari.Embed(description=res["fact"], colour=0x3B9DFF)
                 embed.set_image(res["image"])
                 animal = animal.replace("_", " ")
-                await msg.edit(
-                    f"Here's a {animal} for you! :3", embed=embed, components=[]
-                )
+                await msg.edit(f"Here's a {animal} for you! :3", embed=embed, components=[])
 
             else:
                 await msg.edit(f"API returned a {res.status} status :c", components=[])

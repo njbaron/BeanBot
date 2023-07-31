@@ -21,9 +21,7 @@ info_plugin = lightbulb.Plugin(
 
 
 @info_plugin.command
-@lightbulb.option(
-    "target", "The member to get information about.", hikari.User, required=False
-)
+@lightbulb.option("target", "The member to get information about.", hikari.User, required=False)
 @lightbulb.command("userinfo", "Get info on a server member.")
 @lightbulb.implements(lightbulb.PrefixCommand, lightbulb.SlashCommand)
 async def userinfo(ctx: lightbulb.Context) -> None:
@@ -80,9 +78,7 @@ async def userinfo(ctx: lightbulb.Context) -> None:
 async def ping(ctx: context.Context) -> None:
     start = time()
     msg = await ctx.respond(
-        embed=hikari.Embed(
-            title="Ping", description="Pong!", color=randint(0, 0xFFFFFF)
-        ),
+        embed=hikari.Embed(title="Ping", description="Pong!", color=randint(0, 0xFFFFFF)),
         reply=True,
     )
     end = time()
@@ -118,25 +114,19 @@ async def about_bot(ctx: context.Context) -> None:
         .add_field("CPU Usage", f"{psutil.cpu_percent()}%", inline=True)
         .add_field("Memory Usage", f"{memper}%", inline=True)
         .set_author(name=ctx.author.username, icon=ctx.author.avatar_url)
-        .set_thumbnail(
-            "https://gitlab.com/uploads/-/system/project/avatar/32717895/TGBot_New_Logo_v4.1.png"
-        )
-        .set_footer(
-            text=f"{__title__} v{__version__} | hikari v{hikari_version} | lightbulb v{lightbulb_version}"
-        )
+        .set_thumbnail("https://gitlab.com/uploads/-/system/project/avatar/32717895/TGBot_New_Logo_v4.1.png")
+        .set_footer(text=f"{__title__} v{__version__} | hikari v{hikari_version} | lightbulb v{lightbulb_version}")
     )
     row = ctx.app.rest.build_action_row()
-    row.add_button(
-        hikari.ButtonStyle.LINK, "https://gitlab.com/teamgreenbean/beanbot-lightbulb"
-    ).set_label(f"{__title__} Repository").add_to_container()
+    row.add_button(hikari.ButtonStyle.LINK, "https://gitlab.com/teamgreenbean/beanbot-lightbulb").set_label(
+        f"{__title__} Repository"
+    ).add_to_container()
 
     await ctx.respond(embed=about_embed, component=row, reply=True)
 
 
 @info_plugin.command
-@lightbulb.option(
-    "target", description="User to fetch avatar of", type=hikari.User, required=False
-)
+@lightbulb.option("target", description="User to fetch avatar of", type=hikari.User, required=False)
 @lightbulb.command(
     "avatar",
     description="Fetch Avatar of yourself or the specified user.",
@@ -150,12 +140,8 @@ async def avatar_cmd(ctx: context.Context) -> None:
     embed = (
         hikari.Embed(title=f"Avatar of {target.username}", color=randint(0, 0xFFFFFF))
         .set_image(target.avatar_url)
-        .set_footer(
-            text=f"Requested by {ctx.author.username}", icon=ctx.author.avatar_url
-        )
-        .set_author(
-            name=f"{ctx.app.get_me().username}", icon=ctx.app.get_me().avatar_url
-        )
+        .set_footer(text=f"Requested by {ctx.author.username}", icon=ctx.author.avatar_url)
+        .set_author(name=f"{ctx.app.get_me().username}", icon=ctx.app.get_me().avatar_url)
     )
 
     await ctx.respond(embed=embed, reply=True)
@@ -168,7 +154,7 @@ async def on_plugin_command_error(event: lightbulb.CommandErrorEvent) -> bool:
 
     if isinstance(exception, lightbulb.NotOwner):
         await event.context.respond(
-            f"I am currently in testing, hence I only respond to commands triggered by my owner."
+            "I am currently in testing, hence I only respond to commands triggered by my owner."
         )
         return True
     else:

@@ -134,9 +134,7 @@ async def roll_dice(ctx: lightbulb.Context) -> None:
 
     dice_match = re.findall(dice_regex, dice_in)
     if not dice_match:
-        return await ctx.respond(
-            f"unable to find the dice. Please use the format 5d10+4"
-        )
+        return await ctx.respond("unable to find the dice. Please use the format 5d10+4")
 
     number, dice, modifier = dice_match[0]
     number = int(number if number else 1)
@@ -180,11 +178,7 @@ def greeting_in_message(message: str, greeting_list: list) -> bool:
         if item in message:
             message_split = [i.strip() for i in message.split(item)]
             logger.debug(message_split)
-            if (
-                len(message_split) == 2
-                and len(message_split[0]) == 0
-                and len(message_split[1]) == 0
-            ):
+            if len(message_split) == 2 and len(message_split[0]) == 0 and len(message_split[1]) == 0:
                 return True
             else:
                 break
@@ -208,14 +202,10 @@ async def on_message_invoke(event: hikari.MessageCreateEvent):
         channel_id = event.message.channel_id
         if greeting_in_message(message_split, HELLO_STRINGS):
             await asyncio.sleep(0.2)
-            await text_plugin.bot.rest.create_message(
-                channel_id, f"Hello {event.message.author.mention}!"
-            )
+            await text_plugin.bot.rest.create_message(channel_id, f"Hello {event.message.author.mention}!")
         elif greeting_in_message(message_split, GOODBYE_STRINGS):
             await asyncio.sleep(0.2)
-            await text_plugin.bot.rest.create_message(
-                channel_id, f"Goodbye {event.message.author.mention}!"
-            )
+            await text_plugin.bot.rest.create_message(channel_id, f"Goodbye {event.message.author.mention}!")
 
 
 def load(bot: lightbulb.BotApp) -> None:

@@ -9,13 +9,11 @@ def _in_guild_voice(ctx: lightbulb.Context) -> bool:
 
     voice_state = ctx.bot.cache.get_voice_state(ctx.guild_id, ctx.author.id)
     if not voice_state:
-        raise errors.NotInVoiceChannel(f"Please connect to voice channel to use this")
+        raise errors.NotInVoiceChannel("Please connect to voice channel to use this")
 
     bot_voice_state = ctx.bot.cache.get_voice_state(ctx.guild_id, ctx.bot.get_me().id)
     if bot_voice_state and bot_voice_state.channel_id != voice_state.channel_id:
-        raise errors.NotSameVoiceChannel(
-            "You must be in the same voice channel as the bot to control it"
-        )
+        raise errors.NotSameVoiceChannel("You must be in the same voice channel as the bot to control it")
     return True
 
 
@@ -28,13 +26,11 @@ def _in_guild_voice_match_bot(ctx: lightbulb.Context) -> bool:
 
     voice_state = ctx.bot.cache.get_voice_state(ctx.guild_id, ctx.author.id)
     if not voice_state:
-        raise errors.NotInVoiceChannel(f"Connect to voice channel to use this")
+        raise errors.NotInVoiceChannel("Connect to voice channel to use this")
 
     bot_voice_state = ctx.bot.cache.get_voice_state(ctx.guild_id, ctx.bot.get_me().id)
     if bot_voice_state and bot_voice_state.channel_id != voice_state.channel_id:
-        raise errors.NotSameVoiceChannel(
-            "You must be in the same voice channel as the bot"
-        )
+        raise errors.NotSameVoiceChannel("You must be in the same voice channel as the bot")
     return True
 
 

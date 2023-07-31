@@ -15,11 +15,7 @@ dotenv.load_dotenv()
 BOT_DEV = bool(os.getenv("BOT_DEV"))
 
 _DEFAULT_CONFIG_FILE = Path("./configs/application.yaml")
-CONFIG_FILE = (
-    _DEFAULT_CONFIG_FILE
-    if _DEFAULT_CONFIG_FILE.exists()
-    else Path(os.getenv("BOT_CONFIG_FILE"))
-)
+CONFIG_FILE = _DEFAULT_CONFIG_FILE if _DEFAULT_CONFIG_FILE.exists() else Path(os.getenv("BOT_CONFIG_FILE"))
 
 with CONFIG_FILE.open("r") as reader:
     _config = yaml.safe_load(reader)
@@ -40,26 +36,7 @@ class LavalinkServer:
             self.password = config_dict["password"]
             self.region = config_dict["region"]
         except KeyError as ex:
-            raise ConfigException(
-                f"LavalinkServer failed to find {ex} key in {CONFIG_FILE}:{config_dict}"
-            )
+            raise ConfigException(f"LavalinkServer failed to find {ex} key in {CONFIG_FILE}:{config_dict}")
 
 
 LAVALINK_SERVERS = [LavalinkServer(item) for item in _config.get("lavalink", [])]
-
-
-class StableDiffustionServer:
-    def __init__(self, config_dict: dict) -> None:
-        try:
-            self.name = config_dict["name"]
-            self.host = config_dict["host"]
-            self.port = config_dict["port"]
-        except KeyError as ex:
-            raise ConfigException(
-                f"StableDiffustionServer failed to find {ex} key in {CONFIG_FILE}:{config_dict}"
-            )
-
-
-STABLE_DIFFUSION_SERVERS = [
-    StableDiffustionServer(item) for item in _config.get("stable-diffusion", [])
-]

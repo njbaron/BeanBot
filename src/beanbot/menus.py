@@ -1,8 +1,7 @@
 import logging
-from typing import Any, List, Optional
+from typing import Any, List
 
 import hikari
-import lavalink
 import lightbulb
 import miru
 
@@ -29,9 +28,7 @@ class ResultView(miru.View):
     async def view_check(self, ctx: miru.Context) -> bool:
         return ctx.user.id == self.requester_id
 
-    async def send(
-        self, ctx: lightbulb.Context, message: str = "", embed: hikari.Embed = None
-    ) -> bool:
+    async def send(self, ctx: lightbulb.Context, message: str = "", embed: hikari.Embed = None) -> bool:
         self.requester_id = ctx.user.id
         resp = await ctx.respond(message, embed=embed, components=self.build())
         msg = await resp.message()
@@ -77,13 +74,9 @@ class QuestionSelect(miru.Select):
                 option_str,
                 option_str,
             )
-            for index, option_str in enumerate(
-                answers[: constants.MenuConstants.MAX_SELECT_OPTIONS]
-            )
+            for index, option_str in enumerate(answers[: constants.MenuConstants.MAX_SELECT_OPTIONS])
         ]
-        super().__init__(
-            options=select_options, placeholder=question, max_values=max_values
-        )
+        super().__init__(options=select_options, placeholder=question, max_values=max_values)
 
     async def callback(self, ctx: miru.Context) -> None:
         logger.info(f"Selected {ctx.interaction.values}")
