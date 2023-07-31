@@ -10,10 +10,8 @@ RUN \
 
 WORKDIR /bot
 
-COPY requirements.txt .
+COPY . .
 
-RUN pip install -r requirements.txt
+RUN pip install .
 
-COPY beanbot/ beanbot/
-
-CMD ["python", "-m", "beanbot"]
+CMD ["beanbot"]

@@ -10,7 +10,7 @@ license = "MIT"
 requires-python = ">=3.8"
 keywords = ["discord"]
 authors = [
-    { name = "Nicholas Baron", email = "31226668+njbaron@users.noreply.github.com " },
+    { name = "Nicholas Baron", email = "31226668+njbaron@users.noreply.github.com" },
 ]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
