@@ -2,7 +2,7 @@ version: '3'
 
 services:
   lavalink-server:
-    image: fredboat/lavalink:master
+    image: fredboat/lavalink:3.7.7
     volumes: 
       - "./configs/lavalink:/opt/Lavalink/config"
       - "./data:/opt/Lavalink/data"
@@ -14,5 +14,5 @@ services:
       - "./configs/:/configs"
     environment:
       - BOT_CONFIG_FILE=/configs/application.yaml
-        #      - BOT_DEV=True
+      - BOT_DEV=true
     restart: unless-stopped

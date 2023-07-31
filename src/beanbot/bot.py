@@ -1,5 +1,6 @@
 import logging
 import time
+from pathlib import Path
 
 import aiohttp
 import hikari
@@ -10,6 +11,8 @@ from lightbulb import commands, context
 from beanbot.__about__ import __title__, __version__
 from beanbot import config
 
+EXTENSION_DIR = Path(__file__).parent / "ext"
+
 logger = logging.getLogger(__name__)
 
 bot = lightbulb.BotApp(
@@ -19,13 +22,17 @@ bot = lightbulb.BotApp(
     banner=str(__title__).lower(),
     intents=hikari.Intents.ALL,
 )
-miru.load(bot)
+miru.install(bot)
+
+
+def get_extenstions():
+    return [f"beanbot.ext.{file.stem}" for file in EXTENSION_DIR.glob("*.py")]
 
 
 @bot.listen(hikari.StartingEvent)
 async def starting_listener(event: hikari.StartingEvent) -> None:
     bot.d.aio_session = aiohttp.ClientSession()
-    bot.load_extensions_from("./beanbot/ext/", must_exist=True)
+    bot.load_extensions(*get_extenstions())
 
 
 @bot.listen(hikari.StartedEvent)

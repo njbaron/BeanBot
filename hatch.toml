@@ -2,6 +2,7 @@
 path = "src/beanbot/__about__.py"
 
 [envs.default]
+dev-mode = true
 dependencies = [
   "black>=23.7.0",
   "mypy>=1.4.1",

@@ -4,6 +4,7 @@ import logging
 import re
 from http import HTTPStatus
 from typing import Any, List
+import random
 
 import hikari
 import lavalink
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 audio_plugin = lightbulb.Plugin(name="Audio", description="Allows users to play audio in a voice channel.")
 audio_plugin.add_checks(checks.in_guild_voice_match_bot)
 
-URL_RX = re.compile(r"https?://(?:www\.)?.+")
+RE_URL = re.compile(r"https?://(?:www\.)?.+")
 
 THUMB_MAX_RES_URL = "https://img.youtube.com/vi/{}/maxresdefault.jpg"
 THUMB_DEFAULT_RES_URL = "https://img.youtube.com/vi/{}/default.jpg"
@@ -97,89 +98,89 @@ async def get_thumbnail(idenifier: str) -> str:
     return None
 
 
-class TrackSelect(miru.Select):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+# class TrackSelect(miru.Select):
+#     def __init__(self, *args, **kwargs) -> None:
+#         super().__init__(*args, **kwargs)
 
-    async def callback(self, ctx: miru.Context) -> None:
-        self.view.selected = self.view.find_track_from_id(ctx.interaction.values[0])
-        await self.view.update()
+#     async def callback(self, ctx: miru.Context) -> None:
+#         self.view.selected = self.view.find_track_from_id(ctx.interaction.values[0])
+#         await self.view.update()
 
 
-class TrackSelectView(menus.ResultView):
-    def __init__(
-        self,
-        query,
-        track_results: List[lavalink.AudioTrack],
-        placeholder: str,
-        default_result: Any = None,
-        delete_on_answer: bool = True,
-        *args,
-        **kwargs,
-    ) -> None:
-        super().__init__(default_result, delete_on_answer, *args, **kwargs)
+# class TrackSelectView(menus.ResultView):
+#     def __init__(
+#         self,
+#         query,
+#         track_results: List[lavalink.AudioTrack],
+#         placeholder: str,
+#         default_result: Any = None,
+#         delete_on_answer: bool = True,
+#         *args,
+#         **kwargs,
+#     ) -> None:
+#         super().__init__(default_result, delete_on_answer, *args, **kwargs)
 
-        self.query = query
-        self.timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
-        self.selected = None
+#         self.query = query
+#         self.timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+#         self.selected = None
 
-        self.track_results = track_results
-        select_options = [
-            miru.SelectOption(
-                track.title,
-                track.identifier,
-                description=track.uri,
-                is_default=(index == 0),
-            )
-            for index, track in enumerate(track_results)
-        ]
-        select_component = TrackSelect(options=select_options, placeholder=placeholder)
-        self.add_item(select_component)
+#         self.track_results = track_results
+#         select_options = [
+#             miru.SelectOption(
+#                 track.title,
+#                 track.identifier,
+#                 description=track.uri,
+#                 is_default=(index == 0),
+#             )
+#             for index, track in enumerate(track_results)
+#         ]
+#         select_component = TrackSelect(options=select_options, placeholder=placeholder)
+#         self.add_item(select_component)
 
-    async def get_embed(self):
-        embed = hikari.Embed(
-            title="Choose a track!",
-            description=f"Query: `{self.query}`",
-            timestamp=self.timestamp,
-        )
-        selected = "Nothing yet."
-        if self.selected:
-            selected = f"[{self.selected.title}]({self.selected.uri})"
-        embed.add_field(
-            name="Selected",
-            value=selected,
-            inline=True,
-        )
-        if self.selected and "youtube.com" in self.selected.uri:
-            embed.set_image(await get_thumbnail(self.selected.identifier))
-        else:
-            embed.set_image(audio_plugin.bot.get_me().avatar_url)
+#     async def get_embed(self):
+#         embed = hikari.Embed(
+#             title="Choose a track!",
+#             description=f"Query: `{self.query}`",
+#             timestamp=self.timestamp,
+#         )
+#         selected = "Nothing yet."
+#         if self.selected:
+#             selected = f"[{self.selected.title}]({self.selected.uri})"
+#         embed.add_field(
+#             name="Selected",
+#             value=selected,
+#             inline=True,
+#         )
+#         if self.selected and "youtube.com" in self.selected.uri:
+#             embed.set_image(await get_thumbnail(self.selected.identifier))
+#         else:
+#             embed.set_image(audio_plugin.bot.get_me().avatar_url)
 
-        embed.set_thumbnail(audio_plugin.bot.get_me().avatar_url)
-        return embed
+#         embed.set_thumbnail(audio_plugin.bot.get_me().avatar_url)
+#         return embed
 
-    async def send(self, ctx: lightbulb.Context) -> lavalink.AudioTrack:
-        embed = await self.get_embed()
-        return await super().send(ctx, embed=embed)
+#     async def send(self, ctx: lightbulb.Context) -> lavalink.AudioTrack:
+#         embed = await self.get_embed()
+#         return await super().send(ctx, embed=embed)
 
-    async def update(self):
-        embed = await self.get_embed()
-        await self.message.edit(embed=embed)
+#     async def update(self):
+#         embed = await self.get_embed()
+#         await self.message.edit(embed=embed)
 
-    def find_track_from_id(self, track_id: str) -> lavalink.AudioTrack:
-        for track in self.track_results:
-            if track.identifier == track_id:
-                return track
-        return None
+#     def find_track_from_id(self, track_id: str) -> lavalink.AudioTrack:
+#         for track in self.track_results:
+#             if track.identifier == track_id:
+#                 return track
+#         return None
 
-    @miru.button(label="Accept", style=hikari.ButtonStyle.SUCCESS)
-    async def accept_button(self, button: miru.Button, ctx: miru.Context) -> None:
-        self.result = self.selected
-        self.stop()
+#     @miru.button(label="Accept", style=hikari.ButtonStyle.SUCCESS)
+#     async def accept_button(self, button: miru.Button, ctx: miru.Context) -> None:
+#         self.result = self.selected
+#         self.stop()
 
-    @miru.button(label="Cancel", style=hikari.ButtonStyle.DANGER)
-    async def cancel_button(self, button: miru.Button, ctx: miru.Context) -> None:
-        self.stop()
+#     @miru.button(label="Cancel", style=hikari.ButtonStyle.DANGER)
+#     async def cancel_button(self, button: miru.Button, ctx: miru.Context) -> None:
+#         self.stop()
 
 
 LOOP_ICONS = {0: "⏺", 1: "🔂", 2: "🔁"}
@@ -249,7 +250,7 @@ class TrackUi(miru.View):
         channel: hikari.GuildTextChannel = await audio_plugin.bot.rest.fetch_channel(self.track.extra.get("channel_id"))
         embed = await self.get_embed()
         message = await channel.send(embed=embed, components=self.build())
-        self.start(message)
+        await self.start(message)
         self.task = asyncio.create_task(self.wait())
 
     async def update(self):
@@ -414,7 +415,8 @@ class AudioPlayer(lavalink.DefaultPlayer):
 
         elif results.load_type in [lavalink.LoadType.SEARCH]:
             placeholder = "Pick a track to play!"
-            track = await TrackSelectView(query, results.tracks, placeholder).send(ctx)
+            track = results.tracks[0]
+            # track = await TrackSelectView(query, results.tracks, placeholder).send(ctx)
             if track:
                 self.add(track, requester=ctx.author.id)
                 await ctx.respond(
@@ -504,7 +506,7 @@ async def play(ctx: lightbulb.Context) -> None:
 
     if ctx.options.query:
         query = ctx.options.query.strip("<>")
-        if not URL_RX.match(query):
+        if not RE_URL.match(query):
             query = f"ytsearch:{query}"
         elif "watch?v=" in query:
             query = query.split("&list=")[0]
