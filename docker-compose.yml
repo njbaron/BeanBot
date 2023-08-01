@@ -14,5 +14,5 @@ services:
       - "./configs/:/configs"
     environment:
       - BOT_CONFIG_FILE=/configs/application.yaml
-      - BOT_DEV=true
+      # - BOT_DEV=true
     restart: unless-stopped

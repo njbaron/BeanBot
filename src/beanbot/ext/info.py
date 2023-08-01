@@ -10,7 +10,7 @@ from hikari import __version__ as hikari_version
 from lightbulb import __version__ as lightbulb_version
 from lightbulb import commands, context
 
-from beanbot import __title__, __version__
+from beanbot.__about__ import __title__, __version__
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +86,8 @@ async def ping(ctx: context.Context) -> None:
     await msg.edit(
         embed=hikari.Embed(
             title="Ping",
-            description=f"**Heartbeat**: {ctx.app.heartbeat_latency * 1000:,.0f} ms \n**Latency** : {(end - start) * 1000:,.0f} ms",
+            description=f"**Heartbeat**: {ctx.app.heartbeat_latency * 1000:,.0f} ms "
+            f"\n**Latency** : {(end - start) * 1000:,.0f} ms",
             color=randint(0, 0xFFFFFF),
             timestamp=datetime.now().astimezone(),
         )
@@ -101,13 +102,18 @@ async def about_bot(ctx: context.Context) -> None:
     about_embed = (
         hikari.Embed(
             title=f"About {__title__}",
-            description=f"{__title__} is a custom coded and open source bot made by me for you. It is written in Python and uses [Hikari](https://github.com/hikari-py/hikari) API wrapper and [Lightbulb](https://github.com/tandemdude/hikari-lightbulb) Command Wrapper. {__title__} can't be invited to your server.",
+            description=f"{__title__} is a custom coded and open source bot made by me for you. "
+            "It is written in Python and uses [Hikari](https://github.com/hikari-py/hikari) API wrapper "
+            f"and [Lightbulb](https://github.com/tandemdude/hikari-lightbulb) Command Wrapper. {__title__} "
+            "can't be invited to your server.",
             colour=randint(0, 0xFFFFFF),
             timestamp=datetime.now().astimezone(),
         )
         .add_field(
             name=f"Contribute to {__title__}!",
-            value=f"{__title__} is an Open Source bot with it's source code available [here](https://gitlab.com/uploads/-/system/project/avatar/32717895/TGBot_New_Logo_v4.1.png?width=64). You are free to contribute to it!",
+            value=f"{__title__} is an Open Source bot with it's source code available "
+            "[here](https://gitlab.com/uploads/-/system/project/avatar/32717895/TGBot_New_Logo_v4.1.png?width=64). "
+            "You are free to contribute to it!",
             inline=False,
         )
         .add_field("Ping", f"{ctx.app.heartbeat_latency * 1000:,.0f} ms", inline=True)

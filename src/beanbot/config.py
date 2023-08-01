@@ -21,7 +21,7 @@ with CONFIG_FILE.open("r") as reader:
     _config = yaml.safe_load(reader)
 
 
-BOT_TOKEN = _config.get("token")
+BOT_TOKEN = _config.get("dev_token") if BOT_DEV else _config.get("token")
 BOT_PREFIX = _config.get("prefix")
 LOG_CHANNEL_ID = _config.get("log_channel_id")
 GUILD_IDS = _config.get("guild_ids", [])

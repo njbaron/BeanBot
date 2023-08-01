@@ -31,7 +31,7 @@ class ResultView(miru.View):
         self.requester_id = ctx.user.id
         resp = await ctx.respond(message, embed=embed, components=self.build())
         msg = await resp.message()
-        self.start(msg)
+        await self.start(msg)
         await self.wait()
         if self.delete_on_answer:
             await msg.delete()
