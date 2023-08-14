@@ -50,7 +50,6 @@ History = "https://hatch.pypa.io/dev/history/hatch/"
 Tracker = "https://github.com/pypa/hatch/issues"
 Source = "https://github.com/pypa/hatch"
 
-
 [tool.black]
 line-length = 120
 skip-string-normalization = true
@@ -59,7 +58,6 @@ skip-string-normalization = true
 line-length = 120
 
 [tool.ruff.isort]
-
 
 [tool.ruff.flake8-quotes]
 inline-quotes = "single"

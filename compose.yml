@@ -27,7 +27,6 @@ services:
 
     environment:
       - BOT_CONFIG_FILE=/configs/application.yaml
-      # - BOT_DEV=true
 
     depends_on:
       - lavalink
