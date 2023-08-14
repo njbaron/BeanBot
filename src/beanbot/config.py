@@ -1,6 +1,7 @@
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 import dotenv
 import yaml
@@ -11,20 +12,29 @@ logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
 
+_DEFAULT_CONFIG_FILE = Path("./configs/application.yaml")
 
 BOT_DEV = bool(os.getenv("BOT_DEV"))
-
-_DEFAULT_CONFIG_FILE = Path("./configs/application.yaml")
 CONFIG_FILE = _DEFAULT_CONFIG_FILE if _DEFAULT_CONFIG_FILE.exists() else Path(os.getenv("BOT_CONFIG_FILE"))
 
-with CONFIG_FILE.open("r") as reader:
-    _config = yaml.safe_load(reader)
+_config = yaml.safe_load(CONFIG_FILE.read_text())
 
 
-BOT_TOKEN = _config.get("dev_token") if BOT_DEV else _config.get("token")
-BOT_PREFIX = _config.get("prefix")
-LOG_CHANNEL_ID = _config.get("log_channel_id")
-GUILD_IDS = _config.get("guild_ids", [])
+def get_key(config: dict, key: str, default: Any = None) -> Any:
+    if BOT_DEV:
+        dev_key = f"dev_{key}"
+        logger.info(f"Loading dev config {dev_key}")
+        if dev_key in config.keys():
+            return config.get(dev_key)
+        logger.warning(f"Failed to load dev key {dev_key}")
+
+    return config.get(key, default)
+
+
+BOT_TOKEN = get_key(_config, "token")
+BOT_PREFIX = get_key(_config, "prefix")
+LOG_CHANNEL_ID = get_key(_config, "log_channel_id")
+GUILD_IDS = get_key(_config, "guild_ids")
 
 
 class LavalinkServer:
