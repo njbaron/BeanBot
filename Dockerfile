@@ -9,6 +9,6 @@ WORKDIR /bot
 
 COPY . .
 
-RUN pip install hatch
+RUN pip install -e .
 
-CMD ["hatch", "run", "beanbot"]
+CMD ["beanbot"]

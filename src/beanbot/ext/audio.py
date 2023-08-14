@@ -69,16 +69,20 @@ async def track_hook(event: lavalink.Event) -> bool:
         await player.ui_manager.send(track)
     elif isinstance(
         event,
+        (lavalink.TrackEndEvent,),
+    ):
+        track: lavalink.AudioTrack = event.track
+        player: "AudioPlayer" = event.player
+        logger.info(f"Stopped playing: {track}")
+        await player.ui_manager.stop(track)
+    elif isinstance(
+        event,
         (
-            lavalink.TrackEndEvent,
             lavalink.TrackExceptionEvent,
             lavalink.TrackStuckEvent,
         ),
     ):
-        track: lavalink.AudioTrack = event.track
-        player: "AudioPlayer" = event.player
-        logger.info(f"Stopped playing: {track.title}")
-        await player.ui_manager.stop(track)
+        logger.warning(f"Player returned exception {type(event)} {event.exception}")
 
 
 async def get_thumbnail(idenifier: str) -> str:
@@ -258,11 +262,11 @@ class UiManager:
 
     async def stop(self, track: lavalink.AudioTrack):
         track_ui = self._track_ui_dict.get(track.identifier)
-        if not track_ui:
+        if track_ui is None:
             return
 
-        await track_ui.stop()
         del self._track_ui_dict[track.identifier]
+        await track_ui.stop()
 
     async def destroy(self):
         for _, track_ui in self._track_ui_dict.items():
