@@ -1,0 +1,38 @@
+version: '3'
+
+services:
+  lavalink:
+    image: fredboat/lavalink:3.7.7
+
+    volumes:
+      - type: bind
+        source: ./configs/lavalink
+        target: /opt/Lavalink/config
+      - type: bind
+        source: ./data
+        target: /opt/Lavalink/data
+
+    restart: unless-stopped
+
+  beanbot:
+    build: .
+
+    volumes:
+      - type: bind
+        source: ./configs
+        target: /configs
+      - type: bind
+        source: ./
+        target: /bot
+
+    environment:
+      - BOT_CONFIG_FILE=/configs/application.yaml
+      # - BOT_DEV=true
+
+    depends_on:
+      - lavalink
+    restart: unless-stopped
+
+
+volumes:
+  beanbot-bind-mounts:

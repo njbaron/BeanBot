@@ -1,6 +1,3 @@
-# Build and Run
-#    docker build -t beanbot-lb . && docker run --env-file="./.env" beanbot-lb
-
 FROM python:3.10
 
 RUN \
@@ -12,6 +9,6 @@ WORKDIR /bot
 
 COPY . .
 
-RUN pip install .
+RUN pip install hatch
 
-CMD ["beanbot"]
+CMD ["hatch", "run", "beanbot"]

@@ -123,10 +123,8 @@ async def about_bot(ctx: context.Context) -> None:
         .set_thumbnail("https://gitlab.com/uploads/-/system/project/avatar/32717895/TGBot_New_Logo_v4.1.png")
         .set_footer(text=f"{__title__} v{__version__} | hikari v{hikari_version} | lightbulb v{lightbulb_version}")
     )
-    row = ctx.app.rest.build_action_row()
-    row.add_button(hikari.ButtonStyle.LINK, "https://gitlab.com/teamgreenbean/beanbot-lightbulb").set_label(
-        f"{__title__} Repository"
-    ).add_to_container()
+    row = ctx.app.rest.build_message_action_row()
+    row.add_link_button("https://gitlab.com/teamgreenbean/beanbot-lightbulb", label=f"{__title__} Repository")
 
     await ctx.respond(embed=about_embed, component=row, reply=True)
 

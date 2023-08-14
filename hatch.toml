@@ -6,7 +6,7 @@ dev-mode = true
 dependencies = [
   "black>=23.7.0",
   "mypy>=1.4.1",
-  "ruff<0.0.280",
+  "ruff>=0.0.280",
 ]
 
 # hatch run all
