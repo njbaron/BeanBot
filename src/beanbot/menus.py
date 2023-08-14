@@ -24,7 +24,7 @@ class ResultView(miru.View):
 
         self.requester_id = None
 
-    async def view_check(self, ctx: miru.Context) -> bool:
+    async def view_check(self, ctx: miru.ViewContext) -> bool:
         return ctx.user.id == self.requester_id
 
     async def send(self, ctx: lightbulb.Context, message: str = "", embed: hikari.Embed = None) -> bool:

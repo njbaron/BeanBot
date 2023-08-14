@@ -3,7 +3,7 @@ import datetime
 import logging
 import re
 from http import HTTPStatus
-from typing import Any, List
+from typing import List
 
 import hikari
 import lavalink
@@ -97,91 +97,6 @@ async def get_thumbnail(idenifier: str) -> str:
     return None
 
 
-class TrackSelect(miru.TextSelect):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-
-    async def callback(self, ctx: miru.ViewContext) -> None:
-        self.view.selected = self.view.find_track_from_id(ctx.interaction.values[0])
-        await self.view.update()
-
-
-class TrackSelectView(menus.ResultView):
-    def __init__(
-        self,
-        query,
-        track_results: List[lavalink.AudioTrack],
-        placeholder: str,
-        default_result: Any = None,
-        delete_on_answer: bool = True,
-        *args,
-        **kwargs,
-    ) -> None:
-        super().__init__(default_result, delete_on_answer, *args, **kwargs)
-
-        self.query = query
-        self.timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
-        self.selected = None
-
-        self.track_results = track_results
-        select_options = [
-            miru.SelectOption(
-                track.title,
-                track.identifier,
-                description=track.uri,
-                is_default=(index == 0),
-            )
-            for index, track in enumerate(track_results)
-        ]
-        select_component = TrackSelect(options=select_options, placeholder=placeholder)
-        self.add_item(select_component)
-
-    async def get_embed(self):
-        embed = hikari.Embed(
-            title="Choose a track!",
-            description=f"Query: `{self.query}`",
-            timestamp=self.timestamp,
-        )
-        selected = "Nothing yet."
-        if self.selected:
-            selected = f"[{self.selected.title}]({self.selected.uri})"
-        embed.add_field(
-            name="Selected",
-            value=selected,
-            inline=True,
-        )
-        if self.selected and "youtube.com" in self.selected.uri:
-            embed.set_image(await get_thumbnail(self.selected.identifier))
-        else:
-            embed.set_image(audio_plugin.bot.get_me().avatar_url)
-
-        embed.set_thumbnail(audio_plugin.bot.get_me().avatar_url)
-        return embed
-
-    async def send(self, ctx: lightbulb.Context) -> lavalink.AudioTrack:
-        embed = await self.get_embed()
-        return await super().send(ctx, embed=embed)
-
-    async def update(self):
-        embed = await self.get_embed()
-        await self.message.edit(embed=embed)
-
-    def find_track_from_id(self, track_id: str) -> lavalink.AudioTrack:
-        for track in self.track_results:
-            if track.identifier == track_id:
-                return track
-        return None
-
-    @miru.button(label="Accept", style=hikari.ButtonStyle.SUCCESS)
-    async def accept_button(self, button: miru.Button, ctx: miru.Context) -> None:
-        self.result = self.selected
-        self.stop()
-
-    @miru.button(label="Cancel", style=hikari.ButtonStyle.DANGER)
-    async def cancel_button(self, button: miru.Button, ctx: miru.Context) -> None:
-        self.stop()
-
-
 LOOP_ICONS = {0: "⏺", 1: "🔂", 2: "🔁"}
 
 
@@ -204,7 +119,11 @@ class TrackUi(miru.View):
     async def get_embed(self):
         requester = await audio_plugin.bot.rest.fetch_user(self.track.requester)
 
-        total_duration = datetime.timedelta(milliseconds=self.player.current.duration)
+        if self.player.current is not None:
+            total_duration = datetime.timedelta(milliseconds=self.player.current.duration)
+        else:
+            total_duration = datetime.timedelta(milliseconds=0)
+
         shuffle_icon = "⏺" if not self.player.shuffle else "🔀"
         play_icon = "▶" if not self.player.paused else "⏸"
         loop_icon = LOOP_ICONS[self.player.loop]
@@ -413,9 +332,7 @@ class AudioPlayer(lavalink.DefaultPlayer):
             )
 
         elif results.load_type in [lavalink.LoadType.SEARCH]:
-            placeholder = "Pick a track to play!"
-            # track = results.tracks[0]
-            track = await TrackSelectView(query, results.tracks, placeholder).send(ctx)
+            track = results.tracks[0]
             if track:
                 self.add(track, requester=ctx.author.id)
                 await ctx.respond(
@@ -494,7 +411,7 @@ async def audio_plugin_error_handler(event: events.CommandErrorEvent) -> None:
     "The search or url to play in the voice channel.",
     type=str,
     required=False,
-    modifier=lightbulb.commands.OptionModifier.CONSUME_REST,
+    modifier=lightbulb.commands.OptionModifier.GREEDY,
 )
 @lightbulb.command("play", "Plays audio")
 @lightbulb.implements(lightbulb.PrefixCommand, lightbulb.SlashCommand)
@@ -504,14 +421,17 @@ async def play(ctx: lightbulb.Context) -> None:
     await player.connect(ctx.bot.cache.get_voice_state(ctx.guild_id, ctx.author.id).channel_id)
 
     if ctx.options.query:
-        query = ctx.options.query.strip("<>")
+        query = ctx.options.query
+        if isinstance(query, list):
+            query = " ".join(query)
+        query = query.strip("<>")
         if not RE_URL.match(query):
             query = f"ytsearch:{query}"
         elif "watch?v=" in query:
             query = query.split("&list=")[0]
 
         results: lavalink.LoadResult = await player.node.get_tracks(query)
-        if not await player.add_tracks_from_results(ctx, ctx.options.query, results):
+        if not await player.add_tracks_from_results(ctx, query, results):
             return
         await player.ui_manager.update()
 
