@@ -83,6 +83,9 @@ async def track_hook(event: lavalink.Event) -> bool:
         ),
     ):
         logger.warning(f"Player returned exception {type(event)} {event.exception}")
+        await audio_plugin.bot.rest.create_message(
+            config.LOG_CHANNEL_ID, f"Player returned exception {type(event)} {event.exception}"
+        )
 
 
 async def get_thumbnail(idenifier: str) -> str:
