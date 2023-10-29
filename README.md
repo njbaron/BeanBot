@@ -1,6 +1,6 @@
 # BeanBot: a Discord Hikari - Lightbulb Bot
 
-A test of the hikari - Lightbulb discord bot api in preparation for discord.py obsolescence.
+A hikari - Lightbulb discord bot with audio and meme potential.
 
 ## Running the bot
 
