@@ -7,7 +7,7 @@ name = "beanbot"
 description = "A bot for dem beans on discord."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 keywords = ["discord"]
 authors = [
     { name = "Nicholas Baron", email = "31226668+njbaron@users.noreply.github.com" },

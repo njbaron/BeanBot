@@ -90,7 +90,13 @@ async def uwu_message(ctx: lightbulb.Context) -> None:
 
 
 @text_plugin.command
-@lightbulb.option("question", "The question to ask the 8ball.", type=str, required=True)
+@lightbulb.option(
+    "question",
+    "The question to ask the 8ball.",
+    type=str,
+    required=True,
+    modifier=lightbulb.commands.OptionModifier.GREEDY,
+)
 @lightbulb.command("8ball", "Ask me a question.")
 @lightbulb.implements(lightbulb.PrefixCommand, lightbulb.SlashCommand)
 async def magic_8ball(ctx: lightbulb.Context) -> None:
