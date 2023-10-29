@@ -1,2 +1,81 @@
-[tool.isort]
-profile = "black"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "beanbot"
+description = "A bot for dem beans on discord."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+keywords = ["discord"]
+authors = [
+    { name = "Nicholas Baron", email = "31226668+njbaron@users.noreply.github.com" },
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Web Environment",
+    "Intended Audience :: Other Audience",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Communications :: Chat",
+    "Topic :: Games/Entertainment",
+]
+dependencies = [
+    "hikari==2.0.0.dev120",
+    "hikari-miru==3.1.2",
+    "hikari-lightbulb==2.3.3",
+    "lavalink==4.0.6",
+    "python-dotenv==1.0.0",
+    "pyyaml==6.0.1",
+    "psutil==5.9.5",
+    "uvloop>=0.17.0; sys_platform != 'win32'",
+]
+dynamic = ["version"]
+
+[project.scripts]
+beanbot = "beanbot:main"
+
+[project.urls]
+Homepage = "https://hatch.pypa.io/latest/"
+Sponsor = "https://github.com/sponsors/ofek"
+History = "https://hatch.pypa.io/dev/history/hatch/"
+Tracker = "https://github.com/pypa/hatch/issues"
+Source = "https://github.com/pypa/hatch"
+
+[tool.black]
+line-length = 120
+skip-string-normalization = true
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.isort]
+
+[tool.ruff.flake8-quotes]
+inline-quotes = "single"
+
+[tool.mypy]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+follow_imports = "normal"
+ignore_missing_imports = true
+pretty = true
+show_column_numbers = true
+show_error_codes = true
+warn_no_return = false
+warn_unused_ignores = true
+
+[tool.coverage.run]
+branch = true
+source_pkgs = ["src", "tests"]
+
+[tool.coverage.report]
+exclude_lines = ["no cov", "if __name__ == .__main__.:"]

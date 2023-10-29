@@ -9,9 +9,7 @@ mod_plugin = lightbulb.Plugin(name="Mod", description="Moderator tools")
     lightbulb.has_guild_permissions(hikari.Permissions.MANAGE_MESSAGES),
     lightbulb.bot_has_guild_permissions(hikari.Permissions.MANAGE_MESSAGES),
 )
-@lightbulb.option(
-    "messages", "The number of messages to purge.", type=int, required=True
-)
+@lightbulb.option("messages", "The number of messages to purge.", type=int, required=True)
 @lightbulb.command("purge", "Purge messages.", aliases=["clear"])
 @lightbulb.implements(lightbulb.PrefixCommand, lightbulb.SlashCommand)
 async def purge_messages(ctx: lightbulb.Context) -> None:
