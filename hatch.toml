@@ -1,0 +1,28 @@
+[version]
+path = "src/beanbot/__about__.py"
+
+[envs.lint]
+dev-mode = true
+dependencies = [
+  "black>=23.7.0",
+  "mypy>=1.4.1",
+  "ruff>=0.0.280",
+]
+
+# hatch run lint:all
+# hatch run lint:fmt
+[envs.lint.scripts]
+typing = "mypy --install-types --non-interactive ."
+style = [
+  "ruff {args:.}",
+  "black --check --diff {args:.}",
+]
+fmt = [
+  "black {args:.}",
+  "ruff --fix {args:.}",
+  "style",
+]
+all = [
+  "style",
+  "typing",
+]

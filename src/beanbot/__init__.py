@@ -10,6 +10,3 @@ def main():
         uvloop.install()
 
     bot.run()
-
-
-main()
