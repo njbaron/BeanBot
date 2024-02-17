@@ -445,19 +445,19 @@ async def play(ctx: lightbulb.Context) -> None:
     if not (ctx.options.query and player.paused):
         if not player.is_playing:
             await player.play()
-            await ctx.respond(
-                "Playing audio!",
-                reply=True,
-                delete_after=constants.MessageConsts.DELETE_AFTER,
-            )
+            # await ctx.respond(
+            #     "Playing audio!",
+            #     reply=True,
+            #     delete_after=constants.MessageConsts.DELETE_AFTER,
+            # )
         elif player.paused:
             await player.set_pause(False)
             await player.ui_manager.update()
-            await ctx.respond(
-                "Resuming audio!",
-                reply=True,
-                delete_after=constants.MessageConsts.DELETE_AFTER,
-            )
+            # await ctx.respond(
+            #     "Resuming audio!",
+            #     reply=True,
+            #     delete_after=constants.MessageConsts.DELETE_AFTER,
+            # )
 
 
 @audio_plugin.command
@@ -476,27 +476,27 @@ async def stop(ctx: lightbulb.Context) -> None:
 
     if player.is_playing:
         await player.stop()
-        await ctx.respond(
-            "Audio stopped!",
-            reply=True,
-            delete_after=constants.MessageConsts.DELETE_AFTER,
-        )
+        # await ctx.respond(
+        #     "Audio stopped!",
+        #     reply=True,
+        #     delete_after=constants.MessageConsts.DELETE_AFTER,
+        # )
 
     if not player.queue:
         await player.disconnect()
-        return await ctx.respond(
-            "Disconnected.",
-            reply=True,
-            delete_after=constants.MessageConsts.DELETE_AFTER,
-        )
+        # return await ctx.respond(
+        #     "Disconnected.",
+        #     reply=True,
+        #     delete_after=constants.MessageConsts.DELETE_AFTER,
+        # )
 
     if await menus.YesNoView(False, True).send(ctx, "Clear the queue and disconnect?"):
         await player.disconnect()
-        return await ctx.respond(
-            "Disconnected.",
-            reply=True,
-            delete_after=constants.MessageConsts.DELETE_AFTER,
-        )
+        # return await ctx.respond(
+        #     "Disconnected.",
+        #     reply=True,
+        #     delete_after=constants.MessageConsts.DELETE_AFTER,
+        # )
 
 
 @audio_plugin.command
@@ -515,7 +515,7 @@ async def pause(ctx: lightbulb.Context) -> None:
 
     await player.set_pause(True)
     await player.ui_manager.update()
-    await ctx.respond("Audio paused!", reply=True, delete_after=constants.MessageConsts.DELETE_AFTER)
+    # await ctx.respond("Audio paused!", reply=True, delete_after=constants.MessageConsts.DELETE_AFTER)
 
 
 @audio_plugin.command
@@ -534,11 +534,11 @@ async def next(ctx: lightbulb.Context) -> None:
 
     current = player.current
     await player.skip()
-    await ctx.respond(
-        f"Skipped `{current.title}` <{current.uri}>.",
-        reply=True,
-        delete_after=constants.MessageConsts.DELETE_AFTER,
-    )
+    # await ctx.respond(
+    #     f"Skipped `{current.title}` <{current.uri}>.",
+    #     reply=True,
+    #     delete_after=constants.MessageConsts.DELETE_AFTER,
+    # )
 
 
 def string_to_timedelta(string: str) -> int:
